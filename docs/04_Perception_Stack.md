@@ -9,20 +9,27 @@ We utilize two completely isolated perception layers, achieving different tasks 
 ### 1. The High-Speed Reactive Tracker
 **File:** `lane_following_node.py`
 
-When the car needs to race at high speeds on a track, computational latency must be under `10ms`. Because deep mathematical pipelines (like Neural Nets processing pixels) introduce lag, the Lane Follower relies strictly on ultra-fast OpenCV thresholding algorithms.
+When the car needs to follow a path at high speeds, computational latency must be under `10ms`. The lane following pipeline utilizes a robust, deterministic Computer Vision foundation optimized for physical hardware.
 
 ```mermaid
 graph TD
-    CAM[Camera /image_raw] -->|CompressedImage| OPENCV[Lane Following Node]
-    OPENCV -->|1. Crop ROI| BLUR[Gaussian Blur]
-    BLUR -->|2. Thresholding| MASK[White Color Mask]
-    MASK -->|3. Contours| SPLINE[B-Spline Curve Fitter]
-    SPLINE -->|Target Arc| STANLEY[Stanley Controller]
-    STANLEY -->|geometry_msgs/Twist| MUX[twist_mux Priority 5]
+    CAM[Camera /image_raw] -->|CompressedImage| CORE[Tracking Node]
+    CORE -->|1. Resize| HD[320x240 HD Space]
+    HD -->|2. Perspective Warp| BEV[Bird's-Eye View]
+    BEV -->|3. Masking| MASK[Luma/HSV Binary Mask]
+    MASK -->|4. Histogram| BASE[Line Base Anchors]
+    BASE -->|5. Sliding Windows| POLY[Polynomial Fit]
+    POLY -->|6. Inverse Warp| WAYP[Trajectory Vector]
+    WAYP --> SEL{Controller}
+    SEL -->|autonomy| AUT[Stanley / MPC]
+    SEL -->|basic| PD[PD Controller]
 ```
 
-- **Workflow:** Slices the bottom third of the camera frame $\to$ Applies Gaussian Blurring $\to$ Isolates White lines $\to$ Calculates geometric Contours.
-- **Actuation:** It passes these physical contours into a proprietary **B-Spline Curve Fitter**. This mathematically calculates the actual Arc of the upcoming corner, feeding it to a rigid **Stanley Controller** to compute the perfect steering `cmd_vel` output in microseconds.
+- **Stack-Wide Consistency:** Both the primary racer (`lane_following_node.py`) and the generic color tracker (`line_follow.py`) now benefit from the **Bird's-Eye View** and **Sliding Window** architecture.
+- **Resolution Shift:** Operates at **320x240**, providing 3.3x more pixel density than legacy ports.
+- **Bird's-Eye View (BEV):** Uses a `cv2.warpPerspective` matrix to transform the road into a top-down view for parallel line math.
+- **Robust Tracking:** The **Sliding Window** approach enables the car to "follow" lines through gaps or shadows by maintaining momentum from previous frames.
+- **Deterministic Control:** The solved trajectory is mathematically projected back into camera space, ensuring the controllers receive smooth, lag-free steering vectors.
 
 ### 2. The Deep-Learning Semantic Tracker
 **File:** `yolo_detection.py`

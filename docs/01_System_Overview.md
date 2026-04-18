@@ -14,7 +14,7 @@ mindmap
   root((JetRacer ROS 2))
     Perception
       YOLO11 Semantic Sensor
-      OpenCV High-Speed Lane Follower
+      Advanced BEV Sliding-Window Lane Follower
     Navigation
       RPLidar A1 SLAM Toolbox
       Nav2 SmacPlanner

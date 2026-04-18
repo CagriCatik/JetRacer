@@ -5,9 +5,14 @@
 
 import sys
 import select
-import termios
-import tty
 import threading
+
+try:
+    import termios
+    import tty
+except ImportError:
+    termios = None  # type: ignore[assignment]
+    tty = None  # type: ignore[assignment]
 
 import rclpy
 from rclpy.node import Node
@@ -101,7 +106,12 @@ class TeleopKeyNode(Node):
 
         self._pub = self.create_publisher(Twist, 'cmd_vel_teleop', 1)
 
-        self._settings = termios.tcgetattr(sys.stdin)
+        self._settings = termios.tcgetattr(sys.stdin) if termios is not None else None
+        if termios is None:
+            raise RuntimeError(
+                'teleop_key requires a POSIX terminal (termios). '
+                'Run on Linux/Jetson, not Windows/macOS.'
+            )
         self._stop_event = threading.Event()
 
     def run(self) -> None:

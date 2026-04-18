@@ -9,6 +9,7 @@ import rclpy
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist
 from rcl_interfaces.msg import SetParametersResult
+from rclpy.qos import qos_profile_sensor_data
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Int32
@@ -42,7 +43,7 @@ class FaceDetectNode(Node):
         output_topic = str(self.get_parameter('output_topic').value)
 
         self._img_sub = self.create_subscription(
-            CompressedImage, camera_topic, self._image_callback, 1)
+            CompressedImage, camera_topic, self._image_callback, qos_profile_sensor_data)
         self._img_pub = self.create_publisher(CompressedImage, output_topic, 1)
         self._cmd_pub = self.create_publisher(Twist, 'cmd_vel_vision', 1)
         self._count_pub = self.create_publisher(Int32, 'face_detect/count', 10)
@@ -81,7 +82,7 @@ class FaceDetectNode(Node):
         )
 
         count_msg = Int32()
-        count_msg.data = len(faces) if len(faces) else 0
+        count_msg.data = len(faces)
         self._count_pub.publish(count_msg)
 
         cmd = Twist()

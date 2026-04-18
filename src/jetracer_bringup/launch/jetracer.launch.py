@@ -12,6 +12,11 @@ def generate_launch_description() -> LaunchDescription:
     hardware_params_file = LaunchConfiguration('hardware_params_file')
     localization_params_file = LaunchConfiguration('localization_params_file')
     config_file = LaunchConfiguration('config_file')
+    use_rviz = LaunchConfiguration('use_rviz')
+    rviz_profile = LaunchConfiguration('rviz_profile')
+    rviz_config = LaunchConfiguration('rviz_config')
+    rviz_fixed_frame = LaunchConfiguration('rviz_fixed_frame')
+    use_sim_time = LaunchConfiguration('use_sim_time')
 
     # Build robot_description from xacro at launch time
     robot_description = ParameterValue(
@@ -45,6 +50,31 @@ def generate_launch_description() -> LaunchDescription:
             ]),
             description='Centralized stack parameter file.',
         ),
+        DeclareLaunchArgument(
+            'use_rviz',
+            default_value='false',
+            description='Start RViz for this bringup.',
+        ),
+        DeclareLaunchArgument(
+            'rviz_profile',
+            default_value='description',
+            description='RViz profile: description, navigation, slam, autonomy.',
+        ),
+        DeclareLaunchArgument(
+            'rviz_config',
+            default_value='',
+            description='Optional absolute path to a custom .rviz file.',
+        ),
+        DeclareLaunchArgument(
+            'rviz_fixed_frame',
+            default_value='base_footprint',
+            description='Optional fixed frame override for RViz.',
+        ),
+        DeclareLaunchArgument(
+            'use_sim_time',
+            default_value='false',
+            description='Use simulation time for RViz.',
+        ),
 
         # CRITICAL FIX: On the physical robot, never launch joint_state_publisher
         # (GUI or otherwise) — it floods /joint_states with zeros and conflicts
@@ -76,10 +106,17 @@ def generate_launch_description() -> LaunchDescription:
         # Nav2 outputs to cmd_vel_nav. We convert it to cmd_vel_nav_steer. 
         Node(
             package='jetracer_navigation',
-            executable='cmd_vel_to_steering.py',
+            executable='cmd_vel_to_steering_node',
             name='cmd_vel_to_steering',
             output='screen',
-            parameters=[config_file],
+            parameters=[
+                PathJoinSubstitution([
+                    FindPackageShare('jetracer_navigation'),
+                    'config',
+                    'nav_bridge.yaml'
+                ]),
+                config_file
+            ],
         ),
 
         # ── cmd_vel arbitration ─────────────────────────────────────────────
@@ -95,5 +132,22 @@ def generate_launch_description() -> LaunchDescription:
                 FindPackageShare('jetracer_bringup'), 'config', 'twist_mux.yaml',
             ])],
             remappings=[('cmd_vel_out', 'cmd_vel')],
+        ),
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('jetracer_description'),
+                    'launch',
+                    'rviz.launch.py',
+                ])
+            ),
+            launch_arguments={
+                'use_rviz': use_rviz,
+                'rviz_profile': rviz_profile,
+                'rviz_config': rviz_config,
+                'rviz_fixed_frame': rviz_fixed_frame,
+                'use_sim_time': use_sim_time,
+            }.items(),
         ),
     ])

@@ -13,6 +13,7 @@
 #include <thread>
 #include <vector>
 
+#include "diagnostic_updater/diagnostic_updater.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "geometry_msgs/msg/twist.hpp"
@@ -103,16 +104,29 @@ public:
     send_timer_ = create_wall_timer(
       std::chrono::duration_cast<std::chrono::milliseconds>(send_period),
       std::bind(&JetRacerSerialNode::send_velocity_timer, this));
+
+    // Initialize Diagnostic Updater
+    diagnostic_updater_ = std::make_shared<diagnostic_updater::Updater>(this);
+    diagnostic_updater_->setHardwareID("Waveshare_JetRacer_RP2040");
+    diagnostic_updater_->add("Serial Connection", this, &JetRacerSerialNode::diagnostic_serial);
+    diagnostic_updater_->add("Command Heartbeat", this, &JetRacerSerialNode::diagnostic_heartbeat);
+    diagnostic_updater_->add("Sensor Stream", this, &JetRacerSerialNode::diagnostic_sensors);
   }
 
   ~JetRacerSerialNode() override
   {
     stop_requested_.store(true);
+
+    // EMERGENCY STOP: Send zero-velocity frame before port closure
     if (serial_port_.is_open()) {
+      send_velocity_frame(0.0, 0.0, 0.0);
+      std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Allow serial drain
+      
       boost::system::error_code error_code;
       serial_port_.cancel(error_code);
       serial_port_.close(error_code);
     }
+    
     if (serial_thread_.joinable()) {
       serial_thread_.join();
     }
@@ -201,6 +215,11 @@ private:
         command_timeout_sec_ = parameter.as_double();
       } else if (name == "send_period_sec") {
         send_period_sec_ = parameter.as_double();
+        // Dynamic timer reset
+        const auto send_period = std::chrono::duration<double>(send_period_sec_);
+        send_timer_ = create_wall_timer(
+          std::chrono::duration_cast<std::chrono::milliseconds>(send_period),
+          std::bind(&JetRacerSerialNode::send_velocity_timer, this));
       }
     }
 
@@ -277,15 +296,20 @@ private:
       command_yaw = 0.0;
     }
 
+    send_velocity_frame(command_x, command_y, command_yaw);
+  }
+
+  void send_velocity_frame(double x, double y, double yaw)
+  {
     std::array<uint8_t, 11> buffer{};
     buffer[0] = kHead1;
     buffer[1] = kHead2;
     buffer[2] = 0x0B;
     buffer[3] = kSendTypeVelocity;
 
-    const auto linear_x = static_cast<int16_t>(command_x * 1000.0);
-    const auto linear_y = static_cast<int16_t>(command_y * 1000.0);
-    const auto angular_z = static_cast<int16_t>(command_yaw * 1000.0);
+    const auto linear_x = static_cast<int16_t>(x * 1000.0);
+    const auto linear_y = static_cast<int16_t>(y * 1000.0);
+    const auto angular_z = static_cast<int16_t>(yaw * 1000.0);
 
     buffer[4] = static_cast<uint8_t>((linear_x >> 8) & 0xFF);
     buffer[5] = static_cast<uint8_t>(linear_x & 0xFF);
@@ -308,7 +332,10 @@ private:
 
   void read_exact(uint8_t * destination, std::size_t size)
   {
-    std::scoped_lock lock(serial_mutex_);
+    // read_exact() is called exclusively from serial_task() (one thread).
+    // Locking serial_mutex_ here would deadlock with write_bytes() because
+    // boost::asio::read() blocks for the full byte count while the send timer
+    // simultaneously tries to acquire the same mutex to write.
     boost::asio::read(serial_port_, boost::asio::buffer(destination, size));
   }
 
@@ -455,6 +482,42 @@ private:
     publisher->publish(msg);
   }
 
+  void diagnostic_serial(diagnostic_updater::DiagnosticStatusWrapper & stat)
+  {
+    if (serial_port_.is_open()) {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Port Open");
+      stat.add("Port Name", port_name_);
+      stat.add("Baud Rate", std::to_string(baud_rate_));
+    } else {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Port Closed");
+    }
+  }
+
+  void diagnostic_heartbeat(diagnostic_updater::DiagnosticStatusWrapper & stat)
+  {
+    const double age = (now() - last_command_time_).seconds();
+    if (age < command_timeout_sec_) {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Active");
+    } else {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Timed Out (Braking)");
+    }
+    stat.add("Last Command Age (s)", age);
+    stat.add("Timeout Threshold (s)", command_timeout_sec_);
+  }
+
+  void diagnostic_sensors(diagnostic_updater::DiagnosticStatusWrapper & stat)
+  {
+    const double age = (now() - last_receive_time_).seconds();
+    if (age < 0.2) {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Healthy");
+    } else if (age < 1.0) {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Stale Data");
+    } else {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No Data (Hardware Link Failed)");
+    }
+    stat.add("Stream Latency (s)", age);
+  }
+
   boost::asio::io_service io_service_;
   boost::asio::serial_port serial_port_;
   std::mutex serial_mutex_;
@@ -472,6 +535,7 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_sub_;
   rclcpp::TimerBase::SharedPtr send_timer_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
+  std::shared_ptr<diagnostic_updater::Updater> diagnostic_updater_;
 
   std::string port_name_;
   int baud_rate_{};

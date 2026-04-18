@@ -1,0 +1,14 @@
+# Local parameters for jetracer_behavior
+semantic_behavior:
+  ros__parameters:
+    trigger_class_name: "stop sign"
+    camera_width: 640.0
+    camera_height: 480.0
+    box_size_trigger_pct: 0.15
+    stop_duration_sec: 4.0
+    cooldown_sec: 5.0
+
+collision_assurance:
+  ros__parameters:
+    cone_angle_deg: 30.0
+    min_distance_m: 0.45

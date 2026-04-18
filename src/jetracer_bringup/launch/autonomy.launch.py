@@ -10,6 +10,11 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     config_file = LaunchConfiguration('config_file')
     start_camera = LaunchConfiguration('start_camera')
+    use_rviz = LaunchConfiguration('use_rviz')
+    rviz_profile = LaunchConfiguration('rviz_profile')
+    rviz_config = LaunchConfiguration('rviz_config')
+    rviz_fixed_frame = LaunchConfiguration('rviz_fixed_frame')
+    use_sim_time = LaunchConfiguration('use_sim_time')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -26,6 +31,31 @@ def generate_launch_description():
             default_value='true',
             description='Start the CSI camera pipeline required by lane/yolo nodes.',
         ),
+        DeclareLaunchArgument(
+            'use_rviz',
+            default_value='false',
+            description='Start RViz for autonomy stack visualization.',
+        ),
+        DeclareLaunchArgument(
+            'rviz_profile',
+            default_value='autonomy',
+            description='RViz profile: description, navigation, slam, autonomy.',
+        ),
+        DeclareLaunchArgument(
+            'rviz_config',
+            default_value='',
+            description='Optional absolute path to a custom .rviz file.',
+        ),
+        DeclareLaunchArgument(
+            'rviz_fixed_frame',
+            default_value='odom',
+            description='Optional fixed frame override for RViz.',
+        ),
+        DeclareLaunchArgument(
+            'use_sim_time',
+            default_value='false',
+            description='Use simulation time for RViz.',
+        ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 PathJoinSubstitution([
@@ -36,13 +66,36 @@ def generate_launch_description():
             ),
             condition=IfCondition(start_camera),
         ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('jetracer_description'),
+                    'launch',
+                    'rviz.launch.py',
+                ])
+            ),
+            launch_arguments={
+                'use_rviz': use_rviz,
+                'rviz_profile': rviz_profile,
+                'rviz_config': rviz_config,
+                'rviz_fixed_frame': rviz_fixed_frame,
+                'use_sim_time': use_sim_time,
+            }.items(),
+        ),
         # 1. High-Speed Lane Following Engine
         Node(
             package='jetracer_lane_following',
             executable='lane_following_node.py',
             name='lane_following',
             output='screen',
-            parameters=[config_file]
+            parameters=[
+                PathJoinSubstitution([
+                    FindPackageShare('jetracer_lane_following'),
+                    'config',
+                    'lane_following.yaml'
+                ]),
+                config_file
+            ]
         ),
         
         # 2. YOLO11 Semantic Sensor
@@ -51,7 +104,14 @@ def generate_launch_description():
             executable='yolo_detection.py',
             name='yolo_detection',
             output='screen',
-            parameters=[config_file]
+            parameters=[
+                PathJoinSubstitution([
+                    FindPackageShare('jetracer_perception'),
+                    'config',
+                    'yolo.yaml'
+                ]),
+                config_file
+            ]
         ),
         
         # 3. Behavioral Decision Stack
@@ -60,7 +120,14 @@ def generate_launch_description():
             executable='semantic_behavior.py',
             name='semantic_behavior',
             output='screen',
-            parameters=[config_file]
+            parameters=[
+                PathJoinSubstitution([
+                    FindPackageShare('jetracer_behavior'),
+                    'config',
+                    'behavior.yaml'
+                ]),
+                config_file
+            ]
         ),
         
         # 4. Foxglove Websocket Bridge (Telemetry)
@@ -77,6 +144,22 @@ def generate_launch_description():
             package='jetracer_behavior',
             executable='collision_assurance.py',
             name='collision_assurance',
+            output='screen',
+            parameters=[
+                PathJoinSubstitution([
+                    FindPackageShare('jetracer_behavior'),
+                    'config',
+                    'behavior.yaml'
+                ]),
+                config_file
+            ]
+        ),
+        
+        # 6. Wheel Slip Monitoring (Safety Diagnostic)
+        Node(
+            package='jetracer_behavior',
+            executable='slip_monitor',
+            name='slip_monitor',
             output='screen',
             parameters=[config_file]
         )

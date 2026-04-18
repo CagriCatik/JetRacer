@@ -8,8 +8,10 @@ It maps specifically recognized dictionary terms to physical coordinate poses,
 allowing you to dispatch the robot to rooms via completely localized voice commands.
 """
 
+import os
 import json
 from typing import Optional, Dict, Any
+from ament_index_python.packages import get_package_share_directory
 
 import rclpy
 from geometry_msgs.msg import PoseStamped
@@ -24,13 +26,7 @@ except ImportError:
     pyaudio = None
     Model = None
 
-
 class VoiceCommanderNode(Node):
-    """
-    Allocates an ALSA Audio stream and feeds continuous buffers to the Vosk ML Model.
-    When keyword conditions trigger, publishes geometry goals to Nav2.
-    """
-
     def __init__(self) -> None:
         """Initializes the audio loop, attempts to link hardware, and creates ROS mappings."""
         super().__init__('voice_commander')
@@ -39,17 +35,27 @@ class VoiceCommanderNode(Node):
             self.get_logger().error("Critical missing dependencies. Requires: pip install vosk pyaudio")
             raise RuntimeError('missing dependencies: vosk/pyaudio')
 
-        self.declare_parameter('model_path', '/workspaces/JetRacer-ROS2/models/vosk-model-small-en-us-0.15')
+        # Resolve package models directory
+        package_share_dir = get_package_share_directory('jetracer_voice')
+        default_model = os.path.join(package_share_dir, 'models', 'vosk-model-small-en-us-0.15')
+
+        self.declare_parameter('model_path', default_model)
         self.declare_parameter('kitchen_x', 2.0)
         self.declare_parameter('kitchen_y', 1.5)
 
         model_path: str = str(self.get_parameter('model_path').value)
+        
+        # Path Portability check
+        if not os.path.isabs(model_path):
+            model_path = os.path.join(package_share_dir, 'models', model_path)
+            
+        self.model_path = model_path
         self._kitchen_x: float = float(self.get_parameter('kitchen_x').value)
         self._kitchen_y: float = float(self.get_parameter('kitchen_y').value)
         
         # Audio Initialization wrapped in a sandboxed try/except to prevent violent core dumps
         try:
-            self.model = Model(model_path)
+            self.model = Model(self.model_path)
             self.recognizer = KaldiRecognizer(self.model, 16000)
             self.p = pyaudio.PyAudio()
             self.stream = self.p.open(

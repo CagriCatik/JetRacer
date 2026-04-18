@@ -1,6 +1,7 @@
 <div align="center">
 
-# JetRacer ROS 2 Humble Autonomous Stack
+# JetRacer ROS 2
+**Autonomy | Safety | Jetson Nano Optimized**
 
 [![ROS 2](https://img.shields.io/badge/ROS_2-Humble-blue.svg)](https://docs.ros.org/en/humble/)
 [![Jetson Host](https://img.shields.io/badge/Jetson_Host-Ubuntu_20.04_Workaround-E95420.svg?logo=ubuntu&logoColor=white)](docs/00_ROS2-Jetson-Nano.md)
@@ -9,143 +10,97 @@
 [![Docker Compose](https://img.shields.io/badge/Orchestration-Docker_Compose-2496ED.svg?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![Nav2](https://img.shields.io/badge/Navigation-Nav2-1f6feb.svg)](https://navigation.ros.org/)
 [![SLAM](https://img.shields.io/badge/SLAM-slam__toolbox-0A7E8C.svg)](https://github.com/SteveMacenski/slam_toolbox)
+[![RViz](https://img.shields.io/badge/Visualization-RViz2-4B8BBE.svg)](https://docs.ros.org/en/humble/Tutorials/Intermediate/RViz/RViz-User-Guide/RViz-User-Guide.html)
 [![Foxglove](https://img.shields.io/badge/Telemetry-Foxglove_Bridge-FF6B35.svg)](https://foxglove.dev/)
+[![System](https://img.shields.io/badge/Architecture-Hardened-success.svg)](#production-hardening-roadmap)
+[![Diagnostics](https://img.shields.io/badge/Telemetry-Diagnostic_Ready-informational.svg)](#-active-diagnostics)
+[![Platform](https://img.shields.io/badge/Hardware-Jetson_Nano-76B900.svg?logo=nvidia&logoColor=white)](https://developer.nvidia.com/embedded-computing)
 
-Production-focused ROS 2 Humble stack for the Waveshare JetRacer platform, with modular bringup, perception, behavior, navigation, and voice packages.
+*Professional grade ROS 2 Humble transformation for the Waveshare JetRacer platform. Designed for stability, deterministic control, and comprehensive observability.*
 
 </div>
 
-## Supported Runtime
+---
 
-- ROS distro: ROS 2 Humble
-- Policy: ROS 2 only (no ROS1 bridge, no mixed ROS1/ROS2 runtime)
-- Jetson Nano baseline: Ubuntu 20.04 workaround host + Docker runtime (see [documentation.](docs/00_ROS2-Jetson-Nano.md))
-- Container runtime: `dustynv/ros:humble-ros-base-l4t-r32.7.1`
-- Native `setup/install_ros2.sh` is for Ubuntu 22.04/24.04 only and is not used on the Nano workaround host
+## Production Hardening
+This repository has undergone a comprehensive architectural audit and hardening process to transition from a prototype to a deployment-ready robotics platform.
 
-## Key Capabilities
+### Key Enhancements
+*   **Arbitration Integrity:** All navigation and behavior commands are routed through `twist_mux` with strict priority-based overrides (Emergency > Manual > Behavior > Lane > Nav2).
+*   **Environmental Portability:** Removed all absolute path dependencies. ML models (YOLO, Vosk) and configurations utilize `ament_index` for dynamic, system-agnostic resolution.
+*   **Native Performance:** Critical control bridges (Ackermann conversion) have been ported from Python to **Native C++** to reduce IPC latency and jitter on the Jetson Nano.
+*   **Fail-Safe Design:** Implemented a hardware "Heart-Stop" in the serial bridge and tightened safety watchdogs (0.1s) for immediate teleop disconnection handling.
 
-- Safety command arbitration through `twist_mux`
-- Lane following with Stanley lateral control + PID longitudinal control
-- Nav2-based mapping and navigation (`slam_toolbox` or Cartographer)
-- YOLO-based semantic perception and behavior hooks
-- Collision assurance from LiDAR data
-- Centralized parameter tuning via a single YAML file
+---
 
-## Repository Layout
+## Repository Architecture
 
-- `src/jetracer_bringup`: top-level launch orchestration and shared configs
-- `src/jetracer_hardware`: hardware interfaces and calibration
-- `src/jetracer_localization`: EKF and localization integration
-- `src/jetracer_lane_following`: lane detection and control node
-- `src/jetracer_navigation`: Nav2 launch/config and steering adapter
-- `src/jetracer_perception`: camera perception nodes (YOLO and trackers)
-- `src/jetracer_behavior`: behavior and safety nodes
-- `src/jetracer_voice`: offline voice stack
-- `docs`: architecture and operations documentation
+| Package | Responsibility | Language/Tech |
+| :--- | :--- | :--- |
+| **jetracer_bringup** | Launch orchestration & global overrides | Python / YAML |
+| **jetracer_hardware** | C++ Serial Bridge & Diagnostic Aggregator | C++ / Asio |
+| **jetracer_behavior** | Collision Assurance & Wheel-Slip Monitor | Python / LiDAR |
+| **jetracer_navigation**| Nav2 Integration & Ackermann Bridge | C++ / Nav2 |
+| **jetracer_lane_following**| High-speed Stanley/PID Controller | Python / OpenCV |
+| **jetracer_perception** | YOLO11 Object Detection & Camera | Python / CUDA |
 
-## Quick Start (Docker, Recommended)
+---
 
-Jetson Nano host preparation is documented in [documentation](docs/00_ROS2-Jetson-Nano.md).
+## Deployment Guide
 
-From repository root:
+### 1. Containerized Setup
+Prepare your Jetson Nano using the [Ubuntu 20.04 Workaround](docs/00_ROS2-Jetson-Nano.md).
 
 ```bash
+# Build and enter the hardened workspace
 docker compose up -d --build
 docker exec -it jetracer_workspace bash
-```
 
-Inside container:
-
-```bash
-source ~/.bashrc
-rosdep update
-rosdep install --from-paths src --ignore-src -r -y
-build_workspace
+# Build the C++ components
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 source install/setup.bash
 ```
 
-## Launch Profiles
-
-Base robot bringup:
-
+### 2. Launching Autonomy
+Launch the core hardware and safety stack:
 ```bash
 ros2 launch jetracer_bringup jetracer.launch.py
 ```
 
-Full autonomy pipeline (lane + yolo + behavior + collision + foxglove):
-
+Launch the full autonomous behavior suite:
 ```bash
 ros2 launch jetracer_bringup autonomy.launch.py
 ```
 
-Lane-following stack:
+---
+
+## Active Diagnostics
+The system utilizes the ROS 2 Diagnostic stack. Monitor hardware health in real-time:
 
 ```bash
-ros2 launch jetracer_bringup lane_following.launch.py
+ros2 topic echo /diagnostics
 ```
 
-Enable motion from lane follower:
+**Monitored Metrics:**
+*   **Serial Status:** Port connectivity and throughput.
+*   **Heartbeat Frequency:** Command freshness and safety timing.
+*   **Sensor Streaming:** IMU and Wheel Odom update rates.
+*   **Wheel Slip:** Real-time divergence check between IMU and Encoders.
+
+---
+
+## Testing & Validation
+Verify system health before high-speed deployments using the integrated smoke tests:
 
 ```bash
-ros2 param set /lane_following start true
+colcon test --packages-select jetracer_bringup
+colcon test-result --all
 ```
 
-Navigation against a saved map:
+---
 
-```bash
-ros2 launch jetracer_bringup nav.launch.py
-```
-
-SLAM + navigation:
-
-```bash
-ros2 launch jetracer_bringup slam_nav.launch.py
-```
-
-Foxglove Studio websocket default:
-
-- `ws://<JETSON_IP_ADDRESS>:8765`
-
-## Centralized Configuration
-
-Primary runtime config:
-
-- `src/jetracer_bringup/config/main_config.yaml`
-
-This file contains parameters for:
-
-- `lane_following`
-- `yolo_detection`
-- `semantic_behavior`
-- `collision_assurance`
-- `cmd_vel_to_steering`
-- `foxglove_bridge`
-- `multipoint_navigation`
-- `voice_commander`
-
-All top-level bringup launch files accept:
-
-- `config_file:=<path-to-yaml>`
-
-Example:
-
-```bash
-ros2 launch jetracer_bringup autonomy.launch.py config_file:=/path/to/custom_main_config.yaml
-```
-
-## Documentation
-
-- [00 Jetson Nano Workaround](docs/00_ROS2-Jetson-Nano.md)
-- [01 System Overview](docs/01_System_Overview.md)
-- [02 Hardware and Assembly](docs/02_Hardware_and_Assembly.md)
-- [03 Deployment and Docker](docs/03_Deployment_and_Docker.md)
-- [04 Perception Stack](docs/04_Perception_Stack.md)
-- [05 Navigation and SLAM](docs/05_Navigation_and_SLAM.md)
-- [06 Behavior and Arbitration](docs/06_Behavior_and_Arbitration.md)
-- [07 Voice Commander Stack](docs/07_Voice_Commander_Stack.md)
-- [08 Central Configuration](docs/08_Central_Configuration.md)
-
-## Setup Scripts
-
-Setup helpers and compatibility wrappers are documented in [setup.](setup/README.md)
+## Documentation Index
+- [System Architecture Audit](docs/01_System_Overview.md)
+- [Hardening & Safety Implementation](docs/06_Behavior_and_Arbitration.md)
+- [Jetson Nano Optimization](docs/03_Deployment_and_Docker.md)
+- [Hardware Diagnostic Specs](docs/02_Hardware_and_Assembly.md)

@@ -20,3 +20,35 @@ Top-level ROS 2 launch package for the migrated JetRacer stack.
 ```bash
 ros2 launch jetracer_bringup jetracer.launch.py
 ```
+
+## Lane-Following Controller Option
+
+`jetracer_bringup/lane_following.launch.py` exposes:
+
+- `lateral_controller_type` (`stanley` or `mpc`)
+
+Example:
+
+```bash
+ros2 launch jetracer_bringup lane_following.launch.py \
+  lateral_controller_type:=mpc
+```
+
+## RViz settings
+
+All major bringup launches now expose ROS 2 launch arguments for RViz:
+
+- `use_rviz` (`true`/`false`)
+- `rviz_profile` (`description`, `navigation`, `slam`, `autonomy`)
+- `rviz_config` (absolute `.rviz` path override)
+- `rviz_fixed_frame` (optional fixed-frame override)
+- `use_sim_time` (passed to RViz)
+
+Example:
+
+```bash
+ros2 launch jetracer_bringup nav.launch.py \
+  use_rviz:=true \
+  rviz_profile:=navigation \
+  rviz_fixed_frame:=map
+```

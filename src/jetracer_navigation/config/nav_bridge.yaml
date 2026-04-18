@@ -1,0 +1,8 @@
+# Local parameters for jetracer_navigation steering bridge
+cmd_vel_to_steering:
+  ros__parameters:
+    input_topic: "cmd_vel_nav"
+    output_topic: "cmd_vel_nav_steer"
+    wheelbase: 0.255
+    max_steering_angle: 0.60
+    min_speed_for_steering: 0.05

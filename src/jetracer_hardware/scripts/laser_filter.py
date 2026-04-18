@@ -53,9 +53,10 @@ class LaserFilterNode(Node):
                 if i < len(filtered.intensities):
                     filtered.intensities[i] = 0.0
 
-        for i in range(index, max(length - index, index)):
-            if i >= length:
-                break
+        # Blank the rear arc: rays between index and (length - index).
+        # When index >= length - index the rear arc is zero-width; skip.
+        rear_end = length - index
+        for i in range(index, rear_end):
             filtered.ranges[i] = 0.0
             if i < len(filtered.intensities):
                 filtered.intensities[i] = 0.0

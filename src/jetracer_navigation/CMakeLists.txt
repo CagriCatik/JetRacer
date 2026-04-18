@@ -2,10 +2,24 @@ cmake_minimum_required(VERSION 3.8)
 project(jetracer_navigation)
 
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 install(PROGRAMS
   scripts/cmd_vel_to_steering.py
   scripts/multipoint_nav.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+add_executable(cmd_vel_to_steering_node src/cmd_vel_to_steering_node.cpp)
+target_compile_features(cmd_vel_to_steering_node PUBLIC cxx_std_17)
+ament_target_dependencies(
+  cmd_vel_to_steering_node
+  rclcpp
+  geometry_msgs
+)
+
+install(TARGETS cmd_vel_to_steering_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

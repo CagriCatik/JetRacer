@@ -52,9 +52,9 @@ class MultipointNavigationNode(Node):
         self.goal_handle = None
         self.create_timer(1.0, self.publish_markers)
 
-    def destroy_node(self) -> bool:
+    def destroy_node(self) -> None:
         self.cancel_active_goal()
-        return super().destroy_node()
+        super().destroy_node()
 
     def initialpose_callback(self, msg: PoseWithCovarianceStamped) -> None:
         self.cancel_active_goal()

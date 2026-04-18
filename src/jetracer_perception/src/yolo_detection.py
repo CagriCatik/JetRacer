@@ -8,6 +8,8 @@ It subscribes to a heavily compressed PyTorch video feed, performs GPU-accelerat
 vision_msgs primitives. This allows node-agnostic behavior mapping.
 """
 
+import os
+from ament_index_python.packages import get_package_share_directory
 from typing import Optional
 
 import cv2
@@ -15,6 +17,9 @@ import numpy as np
 import rclpy
 from cv_bridge import CvBridge
 from rcl_interfaces.msg import SetParametersResult
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.qos import qos_profile_sensor_data
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithPose
@@ -25,13 +30,7 @@ try:
 except ImportError:
     YOLO = None
 
-
 class YoloDetectionNode(Node):
-    """
-    Subscribes to image streams, computes deep-learning bounding boxes, and publishes
-    Detection2D arrays for system-wide consumption.
-    """
-
     def __init__(self) -> None:
         """Initializes thresholds, networking, and pre-warms the PyTorch model."""
         super().__init__('yolo_detection')
@@ -40,7 +39,11 @@ class YoloDetectionNode(Node):
             self.get_logger().error("Ultralytics package not found. Run: pip install ultralytics")
             raise RuntimeError("Missing Core Dependency: ultralytics")
 
-        self.declare_parameter('model_path', 'yolov11n.pt')
+        # Resolve package models directory
+        package_share_dir = get_package_share_directory('jetracer_perception')
+        default_model = os.path.join(package_share_dir, 'models', 'yolo11n.pt')
+
+        self.declare_parameter('model_path', default_model)
         self.declare_parameter('conf_thres', 0.5)
         self.declare_parameter('device', 'cuda:0')
         self.declare_parameter('camera_topic', 'csi_cam_0/image_raw/compressed')
@@ -52,6 +55,12 @@ class YoloDetectionNode(Node):
         self._load_params()
         self.add_on_set_parameters_callback(self._param_callback)
 
+        # Logic for path portability
+        model_path = self._model_path
+        if not os.path.isabs(model_path):
+             model_path = os.path.join(package_share_dir, 'models', model_path)
+        
+        self._model_path = model_path
         self.get_logger().info(f"Mapping YOLO Weights: {self._model_path}")
         self._model = YOLO(self._model_path)
         
@@ -63,8 +72,9 @@ class YoloDetectionNode(Node):
         output_topic: str = str(self.get_parameter('output_topic').value)
         detection_topic: str = str(self.get_parameter('detection_topic').value)
 
+        self._sub_group = MutuallyExclusiveCallbackGroup()
         self._img_sub = self.create_subscription(
-            CompressedImage, camera_topic, self._image_callback, 1)
+            CompressedImage, camera_topic, self._image_callback, qos_profile_sensor_data, callback_group=self._sub_group)
         
         self._det_pub = self.create_publisher(Detection2DArray, detection_topic, 10)
         self._img_pub = self.create_publisher(CompressedImage, output_topic, 1)
@@ -79,21 +89,11 @@ class YoloDetectionNode(Node):
 
     def _param_callback(self, params) -> SetParametersResult:
         previous_model_path = self._model_path
-        previous_device = self._device
-        previous_model = self._model
         self._load_params()
         if self._model_path != previous_model_path:
-            requested_model_path = self._model_path
-            try:
-                self._model = YOLO(self._model_path)
-                self._warmup_model()
-                self.get_logger().info(f"Loaded new YOLO model: {self._model_path}")
-            except Exception as exc:
-                self._model_path = previous_model_path
-                self._device = previous_device
-                self._model = previous_model
-                self.get_logger().error(f"Failed to load model '{requested_model_path}': {exc}")
-                return SetParametersResult(successful=False, reason='failed to load model_path')
+            self._model_path = previous_model_path
+            self.get_logger().warn("Expert Policy: Blocking dynamic model swapping to prevent CUDA thread locks.")
+            return SetParametersResult(successful=False, reason="model_path is read-only")
         return SetParametersResult(successful=True)
 
     def _warmup_model(self) -> None:
@@ -199,7 +199,9 @@ def main(args=None) -> None:
     rclpy.init(args=args)
     try:
         node = YoloDetectionNode()
-        rclpy.spin(node)
+        executor = MultiThreadedExecutor()
+        executor.add_node(node)
+        executor.spin()
     except RuntimeError as re:
         print(f"Node execution aborted due to missing dependencies: {re}")
     except Exception as e:

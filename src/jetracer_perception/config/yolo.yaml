@@ -1,0 +1,10 @@
+# Local parameters for jetracer_perception YOLO node
+yolo_detection:
+  ros__parameters:
+    model_path: "yolo11n.pt"
+    conf_thres: 0.65
+    device: "cuda:0"
+    camera_topic: "csi_cam_0/image_raw/compressed"
+    output_topic: "perception/yolo_debug/compressed"
+    detection_topic: "perception/yolo_detections"
+    publish_debug: true

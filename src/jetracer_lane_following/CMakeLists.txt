@@ -10,6 +10,7 @@ install(PROGRAMS
   lib/lane_detection.py
   lib/waypoint_prediction.py
   lib/lateral_control.py
+  lib/mpc_control.py
   lib/longitudinal_control.py
   scripts/lane_following_node.py
   DESTINATION lib/${PROJECT_NAME}

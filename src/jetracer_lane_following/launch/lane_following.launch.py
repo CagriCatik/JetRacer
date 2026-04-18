@@ -6,47 +6,51 @@ from launch_ros.actions import Node
 
 def generate_launch_description() -> LaunchDescription:
     return LaunchDescription([
-        # ── Safety defaults ─────────────────────────────────────────────────
-        # start=false: the car will not move until explicitly enabled.
-        # Enable with:  ros2 param set /lane_following start true
-        # Disable with: ros2 param set /lane_following start false
-        DeclareLaunchArgument('start', default_value='false',
-                              description='Enable cmd_vel output. SAFETY: default false.'),
+        DeclareLaunchArgument(
+            'start',
+            default_value='false',
+            description='Enable cmd_vel output. Safety default is false.',
+        ),
 
-        # ── Speed limits ─────────────────────────────────────────────────────
-        DeclareLaunchArgument('max_speed_ms', default_value='0.3',
-                              description='Maximum forward speed in m/s.'),
-        DeclareLaunchArgument('min_speed_ms', default_value='0.05',
-                              description='Minimum (cornering) speed in m/s.'),
-        DeclareLaunchArgument('kp', default_value='0.8',
-                              description='Longitudinal PID proportional gain.'),
-        DeclareLaunchArgument('ki', default_value='0.1',
-                              description='Longitudinal PID integral gain.'),
-        DeclareLaunchArgument('kd', default_value='0.2',
-                              description='Longitudinal PID derivative gain.'),
-        DeclareLaunchArgument('integral_windup_limit', default_value='2.0',
-                              description='Longitudinal PID integral anti-windup clamp.'),
+        DeclareLaunchArgument('max_speed_ms', default_value='0.3'),
+        DeclareLaunchArgument('min_speed_ms', default_value='0.05'),
+        DeclareLaunchArgument('kp', default_value='0.8'),
+        DeclareLaunchArgument('ki', default_value='0.1'),
+        DeclareLaunchArgument('kd', default_value='0.2'),
+        DeclareLaunchArgument('integral_windup_limit', default_value='2.0'),
 
-        # ── Steering ─────────────────────────────────────────────────────────
-        DeclareLaunchArgument('max_steering_rad', default_value='0.6',
-                              description='Physical steering range in rad (JetRacer max ~0.6).'),
-        DeclareLaunchArgument('gain_constant', default_value='0.025',
-                              description='Stanley cross-track error gain.'),
-        DeclareLaunchArgument('damping_constant', default_value='0.0125',
-                              description='First-order steering damping.'),
+        DeclareLaunchArgument('max_steering_rad', default_value='0.6'),
 
-        # ── Lane detector ────────────────────────────────────────────────────
-        DeclareLaunchArgument('gradient_threshold', default_value='14.0',
-                              description='Gradient magnitude threshold for edge detection.'),
-        DeclareLaunchArgument('spline_smoothness', default_value='10.0',
-                              description='B-spline smoothness (higher = smoother lanes).'),
+        DeclareLaunchArgument(
+            'lateral_controller_type',
+            default_value='stanley',
+            description="Lateral controller: 'stanley' or 'mpc'.",
+        ),
 
-        # ── Planner ──────────────────────────────────────────────────────────
-        # "center" is faster on Jetson Nano; "smooth" adds ~5 ms L-BFGS-B optimisation.
-        DeclareLaunchArgument('way_type', default_value='center',
-                              description='Waypoint mode: "center" or "smooth".'),
+        DeclareLaunchArgument('gain_constant', default_value='0.025'),
+        DeclareLaunchArgument('damping_constant', default_value='0.0125'),
 
-        # ── Camera ───────────────────────────────────────────────────────────
+        DeclareLaunchArgument('mpc_horizon', default_value='8'),
+        DeclareLaunchArgument('mpc_dt', default_value='0.1'),
+        DeclareLaunchArgument('mpc_wheelbase', default_value='0.255'),
+        DeclareLaunchArgument('mpc_q_cte', default_value='2.5'),
+        DeclareLaunchArgument('mpc_q_heading', default_value='1.5'),
+        DeclareLaunchArgument('mpc_q_terminal', default_value='3.0'),
+        DeclareLaunchArgument('mpc_r_steer', default_value='0.2'),
+        DeclareLaunchArgument('mpc_r_steer_rate', default_value='0.8'),
+        DeclareLaunchArgument('mpc_cte_scale_px', default_value='48.0'),
+        DeclareLaunchArgument('mpc_speed_scale_ms', default_value='0.35'),
+        DeclareLaunchArgument('mpc_min_speed_ms', default_value='0.05'),
+
+        DeclareLaunchArgument('gradient_threshold', default_value='14.0'),
+        DeclareLaunchArgument('spline_smoothness', default_value='10.0'),
+
+        DeclareLaunchArgument(
+            'way_type',
+            default_value='center',
+            description="Waypoint mode: 'center' or 'smooth'.",
+        ),
+
         DeclareLaunchArgument(
             'camera_topic',
             default_value='csi_cam_0/image_raw/compressed',
@@ -54,27 +58,38 @@ def generate_launch_description() -> LaunchDescription:
         ),
         DeclareLaunchArgument('publish_debug_image', default_value='true'),
 
-        # ── Node ─────────────────────────────────────────────────────────────
         Node(
             package='jetracer_lane_following',
             executable='lane_following_node.py',
             name='lane_following',
             output='screen',
             parameters=[{
-                'start':               LaunchConfiguration('start'),
-                'max_speed_ms':        LaunchConfiguration('max_speed_ms'),
-                'min_speed_ms':        LaunchConfiguration('min_speed_ms'),
-                'kp':                  LaunchConfiguration('kp'),
-                'ki':                  LaunchConfiguration('ki'),
-                'kd':                  LaunchConfiguration('kd'),
+                'start': LaunchConfiguration('start'),
+                'max_speed_ms': LaunchConfiguration('max_speed_ms'),
+                'min_speed_ms': LaunchConfiguration('min_speed_ms'),
+                'kp': LaunchConfiguration('kp'),
+                'ki': LaunchConfiguration('ki'),
+                'kd': LaunchConfiguration('kd'),
                 'integral_windup_limit': LaunchConfiguration('integral_windup_limit'),
-                'max_steering_rad':    LaunchConfiguration('max_steering_rad'),
-                'gain_constant':       LaunchConfiguration('gain_constant'),
-                'damping_constant':    LaunchConfiguration('damping_constant'),
-                'gradient_threshold':  LaunchConfiguration('gradient_threshold'),
-                'spline_smoothness':   LaunchConfiguration('spline_smoothness'),
-                'way_type':            LaunchConfiguration('way_type'),
-                'camera_topic':        LaunchConfiguration('camera_topic'),
+                'max_steering_rad': LaunchConfiguration('max_steering_rad'),
+                'lateral_controller_type': LaunchConfiguration('lateral_controller_type'),
+                'gain_constant': LaunchConfiguration('gain_constant'),
+                'damping_constant': LaunchConfiguration('damping_constant'),
+                'mpc_horizon': LaunchConfiguration('mpc_horizon'),
+                'mpc_dt': LaunchConfiguration('mpc_dt'),
+                'mpc_wheelbase': LaunchConfiguration('mpc_wheelbase'),
+                'mpc_q_cte': LaunchConfiguration('mpc_q_cte'),
+                'mpc_q_heading': LaunchConfiguration('mpc_q_heading'),
+                'mpc_q_terminal': LaunchConfiguration('mpc_q_terminal'),
+                'mpc_r_steer': LaunchConfiguration('mpc_r_steer'),
+                'mpc_r_steer_rate': LaunchConfiguration('mpc_r_steer_rate'),
+                'mpc_cte_scale_px': LaunchConfiguration('mpc_cte_scale_px'),
+                'mpc_speed_scale_ms': LaunchConfiguration('mpc_speed_scale_ms'),
+                'mpc_min_speed_ms': LaunchConfiguration('mpc_min_speed_ms'),
+                'gradient_threshold': LaunchConfiguration('gradient_threshold'),
+                'spline_smoothness': LaunchConfiguration('spline_smoothness'),
+                'way_type': LaunchConfiguration('way_type'),
+                'camera_topic': LaunchConfiguration('camera_topic'),
                 'publish_debug_image': LaunchConfiguration('publish_debug_image'),
             }],
         ),

@@ -5,7 +5,6 @@ find_package(ament_cmake REQUIRED)
 
 install(PROGRAMS
   src/color_tracking.py
-  src/line_follow.py
   src/object_tracking.py
   src/motion_detect.py
   src/face_detect.py

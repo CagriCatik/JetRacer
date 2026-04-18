@@ -1,0 +1,6 @@
+# Local parameters for jetracer_voice
+voice_commander:
+  ros__parameters:
+    model_path: "vosk-model-small-en-us-0.15"
+    kitchen_x: 2.5
+    kitchen_y: -1.2

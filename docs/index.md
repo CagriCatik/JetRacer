@@ -56,6 +56,11 @@ Use this portal as the canonical operations guide for setup, deployment, and run
     <span>Single-source runtime tuning via main config YAML.</span>
   </a>
 
+  <a class="jr-card" href="10_Runtime_Tuning/">
+    <strong>10. Runtime Tuning Guide: </strong>
+    <span>Real-time adjustments via Foxglove, CLI, and RQT.</span>
+  </a>
+
 </div>
 
 ## Mermaid Rendering Check

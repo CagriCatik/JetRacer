@@ -15,6 +15,7 @@ import math
 
 import rclpy
 from geometry_msgs.msg import Twist
+from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 
 
@@ -29,21 +30,35 @@ class CmdVelToSteeringNode(Node):
         super().__init__('cmd_vel_to_steering')
         
         self.declare_parameter('input_topic', 'cmd_vel_nav')
-        self.declare_parameter('output_topic', 'cmd_vel')
+        self.declare_parameter('output_topic', 'cmd_vel_nav_steer')
         self.declare_parameter('wheelbase', 0.255)
         self.declare_parameter('max_steering_angle', 0.60)
         self.declare_parameter('min_speed_for_steering', 0.05)
 
         input_topic: str = str(self.get_parameter('input_topic').value)
         output_topic: str = str(self.get_parameter('output_topic').value)
-        self.wheelbase: float = float(self.get_parameter('wheelbase').value)
-        self.max_steering_angle: float = float(self.get_parameter('max_steering_angle').value)
-        self.min_speed: float = float(self.get_parameter('min_speed_for_steering').value)
+        self._load_params()
+        self.add_on_set_parameters_callback(self._param_callback)
 
         self.publisher = self.create_publisher(Twist, output_topic, 10)
         self.subscription = self.create_subscription(Twist, input_topic, self.callback, 10)
 
         self.get_logger().info("Ackermann Inverse-Kinematics Node Online.")
+
+    def _load_params(self) -> None:
+        """Load/reload tunable parameters from the ROS 2 parameter store."""
+        self.wheelbase: float = float(self.get_parameter('wheelbase').value)
+        self.max_steering_angle: float = float(self.get_parameter('max_steering_angle').value)
+        self.min_speed: float = float(self.get_parameter('min_speed_for_steering').value)
+
+    def _param_callback(self, params) -> SetParametersResult:
+        """Live-update parameters without restarting the node."""
+        self._load_params()
+        self.get_logger().info(
+            f'cmd_vel_to_steering params updated: wheelbase={self.wheelbase:.3f} '
+            f'max_steering={self.max_steering_angle:.3f} min_speed={self.min_speed:.3f}'
+        )
+        return SetParametersResult(successful=True)
 
     def callback(self, msg: Twist) -> None:
         """

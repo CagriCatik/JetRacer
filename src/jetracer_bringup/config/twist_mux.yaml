@@ -16,7 +16,7 @@ twist_mux:
     topics:
       - name: teleop
         topic: cmd_vel_teleop
-        timeout: 0.5
+        timeout: 0.1
         priority: 10
       - name: behavior
         topic: cmd_vel_behavior

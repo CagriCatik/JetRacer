@@ -7,6 +7,8 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system)
+find_package(diagnostic_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -21,6 +23,8 @@ target_compile_features(jetracer_serial_node PUBLIC cxx_std_17)
 target_include_directories(jetracer_serial_node PRIVATE include)
 ament_target_dependencies(
   jetracer_serial_node
+  diagnostic_msgs
+  diagnostic_updater
   geometry_msgs
   nav_msgs
   rclcpp

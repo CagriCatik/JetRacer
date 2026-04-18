@@ -27,6 +27,9 @@ class OdomPoseToOdometryNode(Node):
         odom.header = msg.header
         odom.header.frame_id = self.odom_frame_id
         odom.child_frame_id = self.base_frame_id
+        # Note: This is an architectural limitation. This node acts as a pose-only bridge.
+        # It copies the 'pose' field but leaves the 'twist' (velocity) field unpopulated 
+        # because PoseWithCovarianceStamped does not contain velocity information.
         odom.pose = msg.pose
         self.publisher.publish(odom)
 

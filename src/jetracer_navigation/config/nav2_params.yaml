@@ -176,7 +176,7 @@ local_costmap:
       rolling_window: true
       width: 5.0
       height: 5.0
-      resolution: 0.05
+      resolution: 0.10
       transform_tolerance: 0.5
       # CRITICAL FIX: Footprint corrected to match actual chassis dimensions.
       footprint: '[[-0.165,-0.115],[0.165,-0.115],[0.165,0.115],[-0.165,0.115]]'

@@ -9,6 +9,11 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description() -> LaunchDescription:
     """Full lane-following stack: camera + hardware + lane_following node."""
     config_file = LaunchConfiguration('config_file')
+    use_rviz = LaunchConfiguration('use_rviz')
+    rviz_profile = LaunchConfiguration('rviz_profile')
+    rviz_config = LaunchConfiguration('rviz_config')
+    rviz_fixed_frame = LaunchConfiguration('rviz_fixed_frame')
+    use_sim_time = LaunchConfiguration('use_sim_time')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -29,13 +34,26 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument('kd', default_value='0.2'),
         DeclareLaunchArgument('integral_windup_limit', default_value='2.0'),
         DeclareLaunchArgument('way_type', default_value='center'),
+        DeclareLaunchArgument('lateral_controller_type', default_value='stanley'),
+        DeclareLaunchArgument('use_rviz', default_value='false'),
+        DeclareLaunchArgument('rviz_profile', default_value='autonomy'),
+        DeclareLaunchArgument('rviz_config', default_value=''),
+        DeclareLaunchArgument('rviz_fixed_frame', default_value='odom'),
+        DeclareLaunchArgument('use_sim_time', default_value='false'),
 
         # ── JetRacer base (hardware + RSP + laser) ─────────────────────────
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(PathJoinSubstitution([
                 FindPackageShare('jetracer_bringup'), 'launch', 'jetracer.launch.py',
             ])),
-            launch_arguments={'config_file': config_file}.items(),
+            launch_arguments={
+                'config_file': config_file,
+                'use_rviz': use_rviz,
+                'rviz_profile': rviz_profile,
+                'rviz_config': rviz_config,
+                'rviz_fixed_frame': rviz_fixed_frame,
+                'use_sim_time': use_sim_time,
+            }.items(),
         ),
 
         # ── CSI camera ────────────────────────────────────────────────────
@@ -61,6 +79,7 @@ def generate_launch_description() -> LaunchDescription:
                     'kd': LaunchConfiguration('kd'),
                     'integral_windup_limit': LaunchConfiguration('integral_windup_limit'),
                     'way_type': LaunchConfiguration('way_type'),
+                    'lateral_controller_type': LaunchConfiguration('lateral_controller_type'),
                 },
             ],
         ),

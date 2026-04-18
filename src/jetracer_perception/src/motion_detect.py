@@ -9,6 +9,7 @@ import numpy as np
 import rclpy
 from cv_bridge import CvBridge
 from rcl_interfaces.msg import SetParametersResult
+from rclpy.qos import qos_profile_sensor_data
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
@@ -35,7 +36,7 @@ class MotionDetectNode(Node):
         status_topic = str(self.get_parameter('status_topic').value)
 
         self._img_sub = self.create_subscription(
-            CompressedImage, camera_topic, self._image_callback, 1)
+            CompressedImage, camera_topic, self._image_callback, qos_profile_sensor_data)
         self._img_pub = self.create_publisher(CompressedImage, output_topic, 1)
         self._status_pub = self.create_publisher(String, status_topic, 10)
 

@@ -8,6 +8,11 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description() -> LaunchDescription:
     slam_backend = LaunchConfiguration('slam_backend')
     config_file = LaunchConfiguration('config_file')
+    use_rviz = LaunchConfiguration('use_rviz')
+    rviz_profile = LaunchConfiguration('rviz_profile')
+    rviz_config = LaunchConfiguration('rviz_config')
+    rviz_fixed_frame = LaunchConfiguration('rviz_fixed_frame')
+    use_sim_time = LaunchConfiguration('use_sim_time')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -20,6 +25,11 @@ def generate_launch_description() -> LaunchDescription:
             description='Centralized stack parameter file.',
         ),
         DeclareLaunchArgument('slam_backend', default_value='slam_toolbox'),
+        DeclareLaunchArgument('use_rviz', default_value='false'),
+        DeclareLaunchArgument('rviz_profile', default_value='slam'),
+        DeclareLaunchArgument('rviz_config', default_value=''),
+        DeclareLaunchArgument('rviz_fixed_frame', default_value='map'),
+        DeclareLaunchArgument('use_sim_time', default_value='false'),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 PathJoinSubstitution([
@@ -28,7 +38,14 @@ def generate_launch_description() -> LaunchDescription:
                     'jetracer.launch.py',
                 ])
             ),
-            launch_arguments={'config_file': config_file}.items(),
+            launch_arguments={
+                'config_file': config_file,
+                'use_rviz': use_rviz,
+                'rviz_profile': rviz_profile,
+                'rviz_config': rviz_config,
+                'rviz_fixed_frame': rviz_fixed_frame,
+                'use_sim_time': use_sim_time,
+            }.items(),
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -56,6 +73,9 @@ def generate_launch_description() -> LaunchDescription:
                     'slam.launch.py',
                 ])
             ),
-            launch_arguments={'slam_backend': slam_backend}.items(),
+            launch_arguments={
+                'slam_backend': slam_backend,
+                'use_sim_time': use_sim_time,
+            }.items(),
         ),
     ])

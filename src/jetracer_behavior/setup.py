@@ -5,7 +5,7 @@ package_name = 'jetracer_behavior'
 setup(
     name=package_name,
     version='1.0.0',
-    packages=find_packages(),
+    packages=find_packages(exclude=['test']),
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -20,8 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'semantic_behavior.py = jetracer_behavior.semantic_behavior:main',
-            'collision_assurance.py = jetracer_behavior.collision_assurance:main'
+            'semantic_behavior = jetracer_behavior.semantic_behavior:main',
+            'collision_assurance = jetracer_behavior.collision_assurance:main',
+            'slip_monitor = jetracer_behavior.slip_monitor:main'
         ],
     },
 )

@@ -14,7 +14,9 @@ from typing import Optional
 import rclpy
 from geometry_msgs.msg import Twist
 from rcl_interfaces.msg import SetParametersResult
-from rclpy.node import Node
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.qos import qos_profile_sensor_data
 from rclpy.timer import Timer
 from vision_msgs.msg import Detection2DArray
 
@@ -41,12 +43,17 @@ class SemanticBehaviorNode(Node):
         self._load_params()
         self.add_on_set_parameters_callback(self._param_callback)
 
+        # Expert ROS 2 Architecture: Isolate callbacks
+        self._timer_group = MutuallyExclusiveCallbackGroup()
+        self._sub_group = MutuallyExclusiveCallbackGroup()
+
         # Publishers / Subscribers
         self._sub = self.create_subscription(
             Detection2DArray,
             'perception/yolo_detections',
             self._detection_callback,
-            10
+            qos_profile_sensor_data,
+            callback_group=self._sub_group
         )
         self._pub = self.create_publisher(Twist, 'cmd_vel_behavior', 10)
 
@@ -59,7 +66,7 @@ class SemanticBehaviorNode(Node):
         self._cooldown_timer: Optional[Timer] = None
 
         # Failsafe Loop: Assert control over twist_mux actively
-        self._publish_timer: Timer = self.create_timer(0.1, self._publish_loop)
+        self._publish_timer: Timer = self.create_timer(0.1, self._publish_loop, callback_group=self._timer_group)
 
         self.get_logger().info("Semantic behavior node initialized and scanning.")
 
@@ -105,24 +112,32 @@ class SemanticBehaviorNode(Node):
     def _trigger_stop(self) -> None:
         """Transitions into the active STOP state, starting the hardware intervention timer."""
         self._is_stopping = True
-        self._stop_timer = self.create_timer(self._stop_duration, self._end_stop)
+        if self._stop_timer is not None:
+            self.destroy_timer(self._stop_timer)
+            self._stop_timer = None
+        self._stop_timer = self.create_timer(self._stop_duration, self._end_stop, callback_group=self._timer_group)
 
     def _end_stop(self) -> None:
         """Releases the STOP state and transitions into COOLDOWN to prevent infinite locking."""
         self.get_logger().info("Stop duration complete. Entering cooldown.")
         self._is_stopping = False
         if self._stop_timer is not None:
-            self._stop_timer.cancel()
-        
+            self.destroy_timer(self._stop_timer)
+            self._stop_timer = None
+
         self._in_cooldown = True
-        self._cooldown_timer = self.create_timer(self._cooldown_duration, self._end_cooldown)
+        if self._cooldown_timer is not None:
+            self.destroy_timer(self._cooldown_timer)
+            self._cooldown_timer = None
+        self._cooldown_timer = self.create_timer(self._cooldown_duration, self._end_cooldown, callback_group=self._timer_group)
 
     def _end_cooldown(self) -> None:
         """Releases all locks, returning the machine to IDLE scanning."""
         self.get_logger().info("Cooldown complete. Resuming semantic scanning.")
         self._in_cooldown = False
         if self._cooldown_timer is not None:
-            self._cooldown_timer.cancel()
+            self.destroy_timer(self._cooldown_timer)
+            self._cooldown_timer = None
 
     def _publish_loop(self) -> None:
         """
@@ -139,8 +154,10 @@ class SemanticBehaviorNode(Node):
 def main(args=None) -> None:
     rclpy.init(args=args)
     node = SemanticBehaviorNode()
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:

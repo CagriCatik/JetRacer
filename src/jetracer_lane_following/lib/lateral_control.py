@@ -17,7 +17,7 @@ __all__ = ["LateralController"]
 class LateralController:
     """Stanley-based lateral controller with damping.
 
-    The waypoints live in the **96×96 pixel image space** produced by
+    The waypoints live in the **320×240 pixel image space** produced by
     :class:`LaneDetection`.  Speed should be supplied in **m/s** (from odometry).
     The gain ``k`` may need re-tuning on the physical robot; start with the
     default and adjust until tracking is stable.
@@ -25,7 +25,7 @@ class LateralController:
     Args:
         gain_constant: Cross-track error gain ``k`` in the Stanley law.
         damping_constant: First-order damping coefficient to reduce steering jitter.
-        vehicle_center_x: Column (in 96-pixel space) that represents the car centre.
+        vehicle_center_x: Column (in 320-pixel space) that represents the car centre.
         steering_limit: Physical steering saturation in **radians**.
             JetRacer max is ~0.6 rad; the output is scaled to [-1, 1] against
             this limit, then the caller multiplies back by ``steering_limit``
@@ -36,7 +36,7 @@ class LateralController:
         self,
         gain_constant: float = 0.025,
         damping_constant: float = 0.0125,
-        vehicle_center_x: float = 48.0,
+        vehicle_center_x: float = 160.0,
         steering_limit: float = 0.6,   # updated from 0.4 (sim) → 0.6 (JetRacer)
     ) -> None:
         self.gain_constant = float(gain_constant)
@@ -74,7 +74,7 @@ class LateralController:
         """Compute one Stanley control step.
 
         Args:
-            waypoints: ``(2, N)`` array in 96-pixel image coordinates.
+            waypoints: ``(2, N)`` array in 320-pixel image coordinates.
             speed_ms: Current vehicle speed in **m/s** (from ``/odom``).
 
         Returns:

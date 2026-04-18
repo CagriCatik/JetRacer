@@ -12,8 +12,20 @@ lane_following:
     kd: 0.2
     integral_windup_limit: 2.0
     max_steering_rad: 0.6
+    lateral_controller_type: "stanley"   # "stanley" or "mpc"
     gain_constant: 1.8
     damping_constant: 1.0
+    mpc_horizon: 8
+    mpc_dt: 0.1
+    mpc_wheelbase: 0.255
+    mpc_q_cte: 2.5
+    mpc_q_heading: 1.5
+    mpc_q_terminal: 3.0
+    mpc_r_steer: 0.2
+    mpc_r_steer_rate: 0.8
+    mpc_cte_scale_px: 48.0
+    mpc_speed_scale_ms: 0.35
+    mpc_min_speed_ms: 0.05
     cut_size: 68
     spline_smoothness: 10.0
     gradient_threshold: 14.0
@@ -26,7 +38,7 @@ lane_following:
 
 yolo_detection:
   ros__parameters:
-    model_path: "yolov11n.pt"
+    model_path: "yolo11n.pt"
     conf_thres: 0.65
     device: "cuda:0"
     camera_topic: "csi_cam_0/image_raw/compressed"
@@ -73,7 +85,7 @@ multipoint_navigation:
 
 voice_commander:
   ros__parameters:
-    model_path: "/workspaces/JetRacer-ROS2/models/vosk-model-small-en-us-0.15"
+    model_path: "vosk-model-small-en-us-0.15"
     kitchen_x: 2.5
     kitchen_y: -1.2
 

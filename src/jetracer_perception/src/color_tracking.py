@@ -12,6 +12,7 @@ import rclpy
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist
 from rcl_interfaces.msg import SetParametersResult
+from rclpy.qos import qos_profile_sensor_data
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 
@@ -49,7 +50,7 @@ class ColorTrackingNode(Node):
         output_topic = str(self.get_parameter('output_topic').value)
 
         self._img_sub = self.create_subscription(
-            CompressedImage, camera_topic, self._image_callback, 1)
+            CompressedImage, camera_topic, self._image_callback, qos_profile_sensor_data)
         self._img_pub = self.create_publisher(CompressedImage, output_topic, 1)
         self._cmd_pub = self.create_publisher(Twist, 'cmd_vel_vision', 1)
 
@@ -74,11 +75,6 @@ class ColorTrackingNode(Node):
         self._start = bool(self.get_parameter('start').value)
 
     def _param_callback(self, params):
-        for p in params:
-            try:
-                setattr(self, f'_{p.name}', p.value)
-            except AttributeError:
-                pass
         self._load_params()
         return SetParametersResult(successful=True)
 
