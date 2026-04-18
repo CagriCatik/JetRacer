@@ -1,7 +1,9 @@
+<div align="center">
+
 # JetRacer ROS 2 Humble Autonomous Stack
 
 [![ROS 2](https://img.shields.io/badge/ROS_2-Humble-blue.svg)](https://docs.ros.org/en/humble/)
-[![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04-E95420.svg?logo=ubuntu&logoColor=white)](https://releases.ubuntu.com/22.04/)
+[![Jetson Host](https://img.shields.io/badge/Jetson_Host-Ubuntu_20.04_Workaround-E95420.svg?logo=ubuntu&logoColor=white)](docs/00_ROS2-Jetson-Nano.md)
 [![Platform](https://img.shields.io/badge/Platform-Jetson_Nano-76B900.svg?logo=nvidia&logoColor=white)](https://developer.nvidia.com/embedded-computing)
 [![Docker](https://img.shields.io/badge/Container-Docker-informational.svg?logo=docker&logoColor=white)](https://docs.docker.com/)
 [![Docker Compose](https://img.shields.io/badge/Orchestration-Docker_Compose-2496ED.svg?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
@@ -11,11 +13,15 @@
 
 Production-focused ROS 2 Humble stack for the Waveshare JetRacer platform, with modular bringup, perception, behavior, navigation, and voice packages.
 
+</div>
+
 ## Supported Runtime
 
 - ROS distro: ROS 2 Humble
 - Policy: ROS 2 only (no ROS1 bridge, no mixed ROS1/ROS2 runtime)
-- Target platform: Jetson Nano workflows documented in [docs/03_Deployment_and_Docker.md](docs/03_Deployment_and_Docker.md)
+- Jetson Nano baseline: Ubuntu 20.04 workaround host + Docker runtime (see [documentation.](docs/00_ROS2-Jetson-Nano.md))
+- Container runtime: `dustynv/ros:humble-ros-base-l4t-r32.7.1`
+- Native `setup/install_ros2.sh` is for Ubuntu 22.04/24.04 only and is not used on the Nano workaround host
 
 ## Key Capabilities
 
@@ -39,6 +45,8 @@ Production-focused ROS 2 Humble stack for the Waveshare JetRacer platform, with 
 - `docs`: architecture and operations documentation
 
 ## Quick Start (Docker, Recommended)
+
+Jetson Nano host preparation is documented in [documentation](docs/00_ROS2-Jetson-Nano.md).
 
 From repository root:
 
@@ -123,12 +131,12 @@ All top-level bringup launch files accept:
 Example:
 
 ```bash
-ros2 launch jetracer_bringup autonomy.launch.py \
-  config_file:=/path/to/custom_main_config.yaml
+ros2 launch jetracer_bringup autonomy.launch.py config_file:=/path/to/custom_main_config.yaml
 ```
 
 ## Documentation
 
+- [00 Jetson Nano Workaround](docs/00_ROS2-Jetson-Nano.md)
 - [01 System Overview](docs/01_System_Overview.md)
 - [02 Hardware and Assembly](docs/02_Hardware_and_Assembly.md)
 - [03 Deployment and Docker](docs/03_Deployment_and_Docker.md)
@@ -140,6 +148,4 @@ ros2 launch jetracer_bringup autonomy.launch.py \
 
 ## Setup Scripts
 
-Setup helpers and compatibility wrappers are documented in:
-
-- `setup/README.md`
+Setup helpers and compatibility wrappers are documented in [setup.](setup/README.md)

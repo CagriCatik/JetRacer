@@ -38,6 +38,11 @@ Supported Ubuntu versions:
 - `22.04` -> installs ROS 2 `humble`
 - `24.04` -> installs ROS 2 `jazzy`
 
+Not supported:
+
+- `20.04` -> script exits by design
+- Jetson Nano workaround host flow in this repository (use Docker runtime instead)
+
 Arguments:
 
 - `--desktop` -> install `ros-$distro-desktop` (default is `ros-base`)
@@ -57,6 +62,11 @@ Example:
 cd setup
 ./install_ros2.sh --desktop
 ```
+
+Jetson Nano workaround note:
+
+- If you are using the Ubuntu 20.04 Nano workaround documented in `../docs/00_ROS2-Jetson-Nano.md`, do not run this script.
+- For that flow, install Docker (`install_docker.sh`) and run the robot stack in container (`../docs/03_Deployment_and_Docker.md`).
 
 ### `install_docker.sh`
 
@@ -206,12 +216,18 @@ Legacy duplicate wrapper scripts were removed to keep one authoritative script p
 Host workstation:
 
 1. `install_balena_etcher.sh` (or `install_pi_imager.sh`)
-2. `install_docker.sh`
+2. `install_docker.sh` (only if this machine is your Docker host)
 3. `install_vscode.sh`
 
-Jetson target:
+Jetson target (Ubuntu 20.04 workaround path):
 
-1. `install_ros2.sh` (only on supported Ubuntu versions)
+1. `install_docker.sh` (if Docker is not already available)
+2. `install_nomachine.sh` (optional)
+3. Follow `../docs/03_Deployment_and_Docker.md` for runtime
+
+Native ROS target (Ubuntu 22.04 or 24.04 only):
+
+1. `install_ros2.sh`
 2. `install_nomachine.sh` (optional)
 3. `install_foxglove.sh` (optional, local desktop use)
 

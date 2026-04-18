@@ -1,42 +1,60 @@
 ﻿# 03. Deployment and Docker
 
-This guide defines the supported Docker workflow for running JetRacer on Jetson Nano.
+This guide is the canonical runtime workflow for JetRacer on Jetson Nano.
 
 ## Supported Configuration
 
-- Host: Jetson Nano with JetPack 4.6.1 (L4T 32.7.1)
+- Hardware: Jetson Nano
+- Host OS baseline: Ubuntu 20.04 workaround image on JetPack 4.6.1 (L4T 32.7.1)
 - Container base: `dustynv/ros:humble-ros-base-l4t-r32.7.1`
 - ROS distro in container: ROS 2 Humble
 - Runtime policy: ROS 2 only (no `ros1_bridge`)
+- Native `setup/install_ros2.sh` on Ubuntu 20.04 host: not supported
+
+Before continuing, complete the host baseline in [00_ROS2-Jetson-Nano.md](00_ROS2-Jetson-Nano.md).
 
 ## 1. Host Prerequisites (Jetson)
 
-Ensure Docker is installed and NVIDIA container runtime support is available (default on JetPack).
+Ensure Docker and NVIDIA container runtime are available:
+
+```bash
+docker --version
+docker compose version
+docker info | grep -i Runtime
+```
+
+If Docker is missing, install it from this repository:
+
+```bash
+cd setup
+./install_docker.sh
+```
+
+Ensure your user can run Docker without sudo:
 
 ```bash
 sudo usermod -aG docker $USER
 ```
 
-Log out and log back in after running the command above.
+Log out and log back in after changing group membership.
 
 ## 2. Start the Container
 
-From the repository root:
+From repository root:
 
 ```bash
-cd JetRacer-ROS2
 docker compose up -d --build
 ```
 
 What this gives you:
 
-- The project image is built from the local `Dockerfile`
-- Source code is bind-mounted into `/workspaces/JetRacer-ROS2`
-- Container runs with host networking and device access for robot hardware
+- Image built from local `Dockerfile`
+- Source bind-mounted into `/workspaces/JetRacer-ROS2`
+- Host networking and device passthrough for robot hardware
 
 ## 3. Build the ROS 2 Workspace
 
-Open a shell inside the running container:
+Open a shell in the running container:
 
 ```bash
 docker exec -it jetracer_workspace bash
