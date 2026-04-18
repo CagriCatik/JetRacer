@@ -1,0 +1,117 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap");
+
+:root {
+  --jr-radius: 16px;
+}
+
+[data-md-color-scheme="default"] {
+  --jr-surface: #f8f7f3;
+  --jr-border: #dbd9d1;
+  --jr-card-bg: #ffffff;
+  --jr-gradient-a: #0f8b8d;
+  --jr-gradient-b: #ff9f1c;
+  --jr-card-hover: #fff7eb;
+}
+
+[data-md-color-scheme="slate"] {
+  --jr-surface: #1e222a;
+  --jr-border: #3a4250;
+  --jr-card-bg: #232933;
+  --jr-gradient-a: #2cb1bc;
+  --jr-gradient-b: #ffb03a;
+  --jr-card-hover: #2a313d;
+}
+
+.md-main__inner {
+  max-width: 76rem;
+}
+
+.md-header {
+  background: linear-gradient(115deg, var(--jr-gradient-a), var(--jr-gradient-b));
+}
+
+.md-header__title,
+.md-header__topic,
+.md-header__button.md-logo {
+  color: #fff;
+}
+
+.jr-hero {
+  padding: 1.4rem 1.2rem;
+  border-radius: var(--jr-radius);
+  border: 1px solid var(--jr-border);
+  background:
+    radial-gradient(circle at top right, rgba(255, 166, 0, 0.22), transparent 45%),
+    radial-gradient(circle at bottom left, rgba(15, 139, 141, 0.25), transparent 50%),
+    var(--jr-surface);
+}
+
+.jr-hero h2 {
+  margin: 0 0 0.5rem;
+}
+
+.jr-hero p {
+  margin: 0;
+  max-width: 68ch;
+}
+
+.jr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.9rem;
+  margin-top: 0.8rem;
+}
+
+.jr-card {
+  display: block;
+  border: 1px solid var(--jr-border);
+  border-radius: var(--jr-radius);
+  padding: 0.9rem;
+  text-decoration: none;
+  color: inherit;
+  background: var(--jr-card-bg);
+  transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.jr-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--jr-gradient-a);
+  background: var(--jr-card-hover);
+}
+
+.jr-card strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.jr-card span {
+  font-size: 0.82rem;
+  opacity: 0.88;
+}
+
+.md-typeset table:not([class]) {
+  border: 1px solid var(--jr-border);
+  border-radius: var(--jr-radius);
+  overflow: hidden;
+}
+
+.md-typeset table:not([class]) th {
+  background: color-mix(in srgb, var(--jr-gradient-a) 12%, var(--jr-card-bg));
+}
+
+.md-typeset pre > code {
+  border-radius: 12px;
+}
+
+.md-typeset .mermaid {
+  border: 1px solid var(--jr-border);
+  border-radius: 14px;
+  padding: 0.8rem;
+  background: var(--jr-card-bg);
+  overflow-x: auto;
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 12px;
+}

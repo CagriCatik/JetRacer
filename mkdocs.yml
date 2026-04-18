@@ -1,0 +1,80 @@
+site_name: JetRacer ROS 2 Documentation
+site_description: Documentation portal for the JetRacer ROS 2 autonomous stack
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - toc.follow
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  font:
+    text: Space Grotesk
+    code: JetBrains Mono
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js
+  - javascripts/mermaid-init.js
+
+nav:
+  - Home: index.md
+  - 00 Jetson Nano Workaround: 00_ROS2-Jetson-Nano.md
+  - 01 System Overview: 01_System_Overview.md
+  - 02 Hardware and Assembly: 02_Hardware_and_Assembly.md
+  - 03 Deployment and Docker: 03_Deployment_and_Docker.md
+  - 04 Perception Stack: 04_Perception_Stack.md
+  - 05 Navigation and SLAM: 05_Navigation_and_SLAM.md
+  - 06 Behavior and Arbitration: 06_Behavior_and_Arbitration.md
+  - 07 Voice Commander Stack: 07_Voice_Commander_Stack.md
+  - 08 Central Configuration: 08_Central_Configuration.md

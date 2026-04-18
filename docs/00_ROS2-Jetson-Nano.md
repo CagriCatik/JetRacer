@@ -26,8 +26,8 @@ This avoids the official-image gap on Jetson Nano while keeping the codebase ali
 
 Reference source used for the workaround path:
 
-- https://github.com/Qengineering/Jetson-Nano-Ubuntu-20-image
-- https://qengineering.eu/install-ubuntu-20.04-on-jetson-nano.html
+- [Jetson-Nano-Ubuntu-20-Image](https://github.com/Qengineering/Jetson-Nano-Ubuntu-20-image)
+- [Install Ubuntu 20.04 on Jetson Nano](https://qengineering.eu/install-ubuntu-20.04-on-jetson-nano.html)
 
 Follow that source for SD image download and flashing details. Their image has historically used `jetson` as the default password; change credentials immediately after first boot.
 

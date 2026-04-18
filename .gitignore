@@ -72,6 +72,9 @@ ENV/
 # Node / frontend artifacts
 node_modules/
 
+# MkDocs output
+site/
+
 # IDE and editor settings
 .vscode/
 .idea/
