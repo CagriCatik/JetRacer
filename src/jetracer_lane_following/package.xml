@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>jetracer_lane_following</name>
+  <version>1.0.0</version>
+  <description>
+    Lane-following autonomous driving pipeline for JetRacer ROS AI Kit.
+    Integrates gradient-based lane detection, B-spline waypoint prediction,
+    Stanley lateral control, and PID longitudinal control into a single
+    ROS 2 node that publishes geometry_msgs/Twist to cmd_vel.
+  </description>
+  <maintainer email="maintainers@example.com">JetRacer ROS 2 Maintainers</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- ROS 2 runtime -->
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <!-- Launch infrastructure -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <!-- Python scientific stack (installed via pip / rosdep on Jetson) -->
+  <!-- numpy, scipy, cv2 (opencv-python) are required -->
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

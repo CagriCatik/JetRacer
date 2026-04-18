@@ -1,0 +1,32 @@
+name: Validate Docs and Scripts
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate Python syntax
+        run: |
+          python - <<'PY'
+          import pathlib
+          import py_compile
+
+          for path in pathlib.Path('.').rglob('*.py'):
+              py_compile.compile(str(path), doraise=True)
+          PY
+
+      - name: Validate shell syntax
+        run: |
+          find . -name '*.sh' -print0 | xargs -0 -n 1 bash -n

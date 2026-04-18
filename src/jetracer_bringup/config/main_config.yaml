@@ -1,0 +1,93 @@
+# JetRacer ROS 2 centralized runtime configuration.
+# Top-level bringup launch files pass this file to autonomy, steering conversion,
+# and optional multipoint navigation.
+
+lane_following:
+  ros__parameters:
+    start: false
+    max_speed_ms: 0.35
+    min_speed_ms: 0.05
+    kp: 1.5
+    ki: 0.0
+    kd: 0.2
+    integral_windup_limit: 2.0
+    max_steering_rad: 0.6
+    gain_constant: 1.8
+    damping_constant: 1.0
+    cut_size: 68
+    spline_smoothness: 10.0
+    gradient_threshold: 14.0
+    distance_maxima_gradient: 3
+    num_waypoints: 6
+    way_type: "center"
+    smoothing_beta: 30.0
+    publish_debug_image: true
+    camera_topic: "csi_cam_0/image_raw/compressed"
+
+yolo_detection:
+  ros__parameters:
+    model_path: "yolov11n.pt"
+    conf_thres: 0.65
+    device: "cuda:0"
+    camera_topic: "csi_cam_0/image_raw/compressed"
+    output_topic: "perception/yolo_debug/compressed"
+    detection_topic: "perception/yolo_detections"
+    publish_debug: true
+
+semantic_behavior:
+  ros__parameters:
+    trigger_class_name: "stop sign"
+    camera_width: 640.0
+    camera_height: 480.0
+    box_size_trigger_pct: 0.15
+    stop_duration_sec: 4.0
+    cooldown_sec: 5.0
+
+collision_assurance:
+  ros__parameters:
+    cone_angle_deg: 30.0
+    min_distance_m: 0.45
+
+cmd_vel_to_steering:
+  ros__parameters:
+    input_topic: "cmd_vel_nav"
+    output_topic: "cmd_vel_nav_steer"
+    wheelbase: 0.255
+    max_steering_angle: 0.60
+    min_speed_for_steering: 0.05
+
+foxglove_bridge:
+  ros__parameters:
+    port: 8765
+    send_buffer_limit: 100000000
+
+multipoint_navigation:
+  ros__parameters:
+    goal_frame: "map"
+    marker_topic: "path_point"
+    clicked_point_topic: "clicked_point"
+    initial_pose_topic: "initialpose"
+    forward_initialpose_topic: "rtabmap/initialpose"
+    loop_forever: true
+    retry_failed_once: true
+
+voice_commander:
+  ros__parameters:
+    model_path: "/workspaces/JetRacer-ROS2/models/vosk-model-small-en-us-0.15"
+    kitchen_x: 2.5
+    kitchen_y: -1.2
+
+teleop_key:
+  ros__parameters:
+    speed: 0.5
+    turn: 1.0
+
+teleop_joy:
+  ros__parameters:
+    x_speed: 0.3
+    y_speed: 0.0
+    w_speed: 1.0
+    linear_axis: 3
+    angular_axis: 0
+    deadman_button: 6
+    hz: 20

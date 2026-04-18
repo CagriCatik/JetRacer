@@ -1,0 +1,13 @@
+[Unit]
+Description=Jetson PWM fan controller
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env python3 /usr/local/lib/automagic-fan/main.py --config /etc/automagic-fan/config.json
+Restart=always
+RestartSec=2
+User=root
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,37 @@
+# twist_mux configuration for JetRacer ROS 2
+#
+# Priority (highest = wins):
+#   10 - Teleop keyboard/joystick  (operator override, immediate)
+#    5 - Lane following             (autonomous AI pipeline)
+#    3 - Nav2 controller_server     (Nav2 autonomous navigation)
+#
+# All sources have a timeout so the car stops if the topic goes silent.
+#
+# NOTE: lane_following and nav2 outputs are RAW yaw-rate Twist.
+#       cmd_vel_to_steering.py must subscribe to the twist_mux output
+#       to convert yaw-rate → Ackermann steering angle.
+
+twist_mux:
+  ros__parameters:
+    topics:
+      - name: teleop
+        topic: cmd_vel_teleop
+        timeout: 0.5
+        priority: 10
+      - name: behavior
+        topic: cmd_vel_behavior
+        timeout: 0.3
+        priority: 8
+      - name: lane_following
+        topic: cmd_vel_lane
+        timeout: 0.3
+        priority: 5
+      - name: vision
+        topic: cmd_vel_vision
+        timeout: 0.5
+        priority: 4
+      - name: nav2
+        topic: cmd_vel_nav_steer
+        timeout: 0.5
+        priority: 3
+    locks: []

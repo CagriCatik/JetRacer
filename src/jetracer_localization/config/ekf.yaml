@@ -1,0 +1,36 @@
+/**:
+  ros__parameters:
+    frequency: 30.0
+    sensor_timeout: 0.1
+    two_d_mode: true
+    publish_tf: true
+    publish_acceleration: false
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_footprint
+    world_frame: odom
+
+    odom0: /odom_raw
+    odom0_config: [true,  true,  false,
+                   false, false, true,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom0_queue_size: 10
+    odom0_differential: false
+    odom0_relative: false
+
+    imu0: /imu
+    # CRITICAL FIX: The JetRacer MCU sends pre-fused Euler angles from its
+    # onboard AHRS — NOT raw accelerometer data.  Fusing the "linear
+    # acceleration" field from a pre-fused source corrupts the EKF estimate.
+    # Only fuse: yaw orientation (row4 col3) and yaw rate (row5 col3).
+    imu0_config: [false, false, false,
+                  false, false, true,
+                  false, false, false,
+                  false, false, true,
+                  false, false, false]
+    imu0_queue_size: 10
+    imu0_differential: false
+    imu0_relative: false
+    imu0_remove_gravitational_acceleration: false

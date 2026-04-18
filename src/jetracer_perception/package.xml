@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>jetracer_perception</name>
+  <version>0.3.0</version>
+  <description>ROS 2 camera and perception launch package for JetRacer.</description>
+  <maintainer email="maintainers@example.com">JetRacer ROS 2 Maintainers</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Camera driver -->
+  <exec_depend>camera_info_manager</exec_depend>
+  <exec_depend>gscam</exec_depend>
+  <exec_depend>image_transport</exec_depend>
+
+  <!-- Vision nodes -->
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <depend>vision_msgs</depend>
+
+  <!-- Launch -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,83 @@
+﻿# ROS2 / colcon workspace artifacts
+/build/
+/install/
+/log/
+/devel/
+/devel_isolated/
+/build_isolated/
+/install_isolated/
+.colcon/
+.colcon_install_layout
+
+# ROS runtime artifacts
+*.db3
+*.mcap
+*.bag
+rosbag2_*/
+*.active
+*.orig
+*.rej
+
+# Python cache and packaging artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+dist/
+wheelhouse/
+.ipynb_checkpoints/
+
+# Virtual environments and local env files
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+!.env.example
+
+# C/C++ build artifacts
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/
+
+# Node / frontend artifacts
+node_modules/
+
+# IDE and editor settings
+.vscode/
+.idea/
+*.code-workspace
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+Desktop.ini

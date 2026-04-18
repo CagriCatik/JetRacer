@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    port_name: /dev/ttyACM0
+    baud_rate: 115200
+    publish_odom_transform: false
+    odom_frame_id: odom
+    base_frame_id: base_footprint
+    imu_frame_id: imu_link
+    linear_correction: 1.0
+    coefficient_a: -0.016073
+    coefficient_b: 0.176183
+    coefficient_c: -23.428084
+    coefficient_d: 1500.0
+    kp: 350
+    ki: 120
+    kd: 0
+    servo_bias: 0
+    command_timeout_sec: 1.0
+    send_period_sec: 0.02

@@ -1,0 +1,9 @@
+multipoint_navigation:
+  ros__parameters:
+    goal_frame: "map"
+    marker_topic: "path_point"
+    clicked_point_topic: "clicked_point"
+    initial_pose_topic: "initialpose"
+    forward_initialpose_topic: "rtabmap/initialpose"
+    loop_forever: true
+    retry_failed_once: true

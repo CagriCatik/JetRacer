@@ -1,0 +1,23 @@
+services:
+  jetracer_ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jetracer-ros2:humble
+    container_name: jetracer_workspace
+    privileged: true
+    network_mode: host
+    ipc: host
+    runtime: nvidia
+    volumes:
+      # Mount the active repository so code changes reflect instantly
+      - .:/workspaces/JetRacer-ROS2
+      # Passthrough host devices for hardware interaction
+      - /dev:/dev
+      - /dev/snd:/dev/snd
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - ROS_DOMAIN_ID=0
+    # Keep container alive silently so we can exec into it across multiple terminals
+    command: tail -f /dev/null

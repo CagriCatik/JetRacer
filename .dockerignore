@@ -1,0 +1,40 @@
+.git/
+.github/
+.devcontainer/
+
+# ROS build artifacts
+build/
+install/
+log/
+.colcon/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Dependency and packaging outputs
+node_modules/
+dist/
+wheelhouse/
+*.egg-info/
+

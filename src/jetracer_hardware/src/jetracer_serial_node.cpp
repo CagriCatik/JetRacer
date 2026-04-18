@@ -1,0 +1,512 @@
+#include <boost/asio.hpp>
+
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include "geometry_msgs/msg/quaternion.hpp"
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "geometry_msgs/msg/twist.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+#include "rcl_interfaces/msg/set_parameters_result.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+#include "std_msgs/msg/int32.hpp"
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "tf2_ros/transform_broadcaster.h"
+
+namespace
+{
+constexpr uint8_t kHead1 = 0xAA;
+constexpr uint8_t kHead2 = 0x55;
+constexpr uint8_t kSendTypeVelocity = 0x11;
+constexpr uint8_t kSendTypeParams = 0x12;
+constexpr uint8_t kSendTypeCoefficient = 0x13;
+constexpr std::size_t kMaxFrameSize = 64;
+
+uint8_t checksum(const uint8_t * buffer, std::size_t length)
+{
+  uint8_t sum = 0;
+  for (std::size_t index = 0; index < length; ++index) {
+    sum = static_cast<uint8_t>(sum + buffer[index]);
+  }
+  return sum;
+}
+
+int16_t decode_int16(uint8_t high, uint8_t low)
+{
+  return static_cast<int16_t>((static_cast<uint16_t>(high) << 8U) | static_cast<uint16_t>(low));
+}
+}  // namespace
+
+class JetRacerSerialNode : public rclcpp::Node
+{
+public:
+  JetRacerSerialNode()
+  : Node("jetracer_hardware"),
+    serial_port_(io_service_),
+    tf_broadcaster_(std::make_unique<tf2_ros::TransformBroadcaster>(*this))
+  {
+    declare_parameter<std::string>("port_name", "/dev/ttyACM0");
+    declare_parameter<int>("baud_rate", 115200);
+    declare_parameter<bool>("publish_odom_transform", false);
+    declare_parameter<std::string>("odom_frame_id", "odom");
+    declare_parameter<std::string>("base_frame_id", "base_footprint");
+    declare_parameter<std::string>("imu_frame_id", "imu_link");
+    declare_parameter<double>("linear_correction", 1.0);
+    declare_parameter<double>("coefficient_a", -0.016073);
+    declare_parameter<double>("coefficient_b", 0.176183);
+    declare_parameter<double>("coefficient_c", -23.428084);
+    declare_parameter<double>("coefficient_d", 1500.0);
+    declare_parameter<int>("kp", 350);
+    declare_parameter<int>("ki", 120);
+    declare_parameter<int>("kd", 0);
+    declare_parameter<int>("servo_bias", 0);
+    declare_parameter<double>("command_timeout_sec", 1.0);
+    declare_parameter<double>("send_period_sec", 0.02);
+
+    load_parameters();
+
+    imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu", 10);
+    odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("odom_raw", 10);
+    left_velocity_pub_ = create_publisher<std_msgs::msg::Int32>("motor/lvel", 10);
+    right_velocity_pub_ = create_publisher<std_msgs::msg::Int32>("motor/rvel", 10);
+    left_setpoint_pub_ = create_publisher<std_msgs::msg::Int32>("motor/lset", 10);
+    right_setpoint_pub_ = create_publisher<std_msgs::msg::Int32>("motor/rset", 10);
+
+    cmd_sub_ = create_subscription<geometry_msgs::msg::Twist>(
+      "cmd_vel", 10,
+      std::bind(&JetRacerSerialNode::cmd_callback, this, std::placeholders::_1));
+
+    parameter_callback_handle_ = add_on_set_parameters_callback(
+      std::bind(&JetRacerSerialNode::parameter_callback, this, std::placeholders::_1));
+
+    open_serial_port();
+    send_coefficient();
+    send_params();
+
+    last_receive_time_ = now();
+    last_command_time_ = now();
+    serial_thread_ = std::thread(&JetRacerSerialNode::serial_task, this);
+
+    const auto send_period = std::chrono::duration<double>(send_period_sec_);
+    send_timer_ = create_wall_timer(
+      std::chrono::duration_cast<std::chrono::milliseconds>(send_period),
+      std::bind(&JetRacerSerialNode::send_velocity_timer, this));
+  }
+
+  ~JetRacerSerialNode() override
+  {
+    stop_requested_.store(true);
+    if (serial_port_.is_open()) {
+      boost::system::error_code error_code;
+      serial_port_.cancel(error_code);
+      serial_port_.close(error_code);
+    }
+    if (serial_thread_.joinable()) {
+      serial_thread_.join();
+    }
+  }
+
+private:
+  void load_parameters()
+  {
+    port_name_ = get_parameter("port_name").as_string();
+    baud_rate_ = get_parameter("baud_rate").as_int();
+    publish_odom_transform_ = get_parameter("publish_odom_transform").as_bool();
+    odom_frame_id_ = get_parameter("odom_frame_id").as_string();
+    base_frame_id_ = get_parameter("base_frame_id").as_string();
+    imu_frame_id_ = get_parameter("imu_frame_id").as_string();
+    linear_correction_ = get_parameter("linear_correction").as_double();
+    coefficient_a_ = get_parameter("coefficient_a").as_double();
+    coefficient_b_ = get_parameter("coefficient_b").as_double();
+    coefficient_c_ = get_parameter("coefficient_c").as_double();
+    coefficient_d_ = get_parameter("coefficient_d").as_double();
+    kp_ = get_parameter("kp").as_int();
+    ki_ = get_parameter("ki").as_int();
+    kd_ = get_parameter("kd").as_int();
+    servo_bias_ = get_parameter("servo_bias").as_int();
+    command_timeout_sec_ = get_parameter("command_timeout_sec").as_double();
+    send_period_sec_ = get_parameter("send_period_sec").as_double();
+  }
+
+  void open_serial_port()
+  {
+    boost::system::error_code error_code;
+    serial_port_.open(port_name_, error_code);
+    if (error_code) {
+      throw std::runtime_error("Failed to open serial port " + port_name_ + ": " + error_code.message());
+    }
+
+    serial_port_.set_option(boost::asio::serial_port::baud_rate(baud_rate_));
+    serial_port_.set_option(boost::asio::serial_port::flow_control(boost::asio::serial_port::flow_control::none));
+    serial_port_.set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::none));
+    serial_port_.set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::one));
+    serial_port_.set_option(boost::asio::serial_port::character_size(8));
+
+    RCLCPP_INFO(get_logger(), "Opened serial port %s at %d baud.", port_name_.c_str(), baud_rate_);
+  }
+
+  void cmd_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
+  {
+    std::scoped_lock lock(command_mutex_);
+    commanded_x_ = msg->linear.x;
+    commanded_y_ = msg->linear.y;
+    commanded_yaw_ = msg->angular.z;
+    last_command_time_ = now();
+  }
+
+  rcl_interfaces::msg::SetParametersResult parameter_callback(
+    const std::vector<rclcpp::Parameter> & parameters)
+  {
+    for (const auto & parameter : parameters) {
+      const auto & name = parameter.get_name();
+      if (name == "publish_odom_transform") {
+        publish_odom_transform_ = parameter.as_bool();
+      } else if (name == "odom_frame_id") {
+        odom_frame_id_ = parameter.as_string();
+      } else if (name == "base_frame_id") {
+        base_frame_id_ = parameter.as_string();
+      } else if (name == "imu_frame_id") {
+        imu_frame_id_ = parameter.as_string();
+      } else if (name == "linear_correction") {
+        linear_correction_ = parameter.as_double();
+      } else if (name == "coefficient_a") {
+        coefficient_a_ = parameter.as_double();
+      } else if (name == "coefficient_b") {
+        coefficient_b_ = parameter.as_double();
+      } else if (name == "coefficient_c") {
+        coefficient_c_ = parameter.as_double();
+      } else if (name == "coefficient_d") {
+        coefficient_d_ = parameter.as_double();
+      } else if (name == "kp") {
+        kp_ = parameter.as_int();
+      } else if (name == "ki") {
+        ki_ = parameter.as_int();
+      } else if (name == "kd") {
+        kd_ = parameter.as_int();
+      } else if (name == "servo_bias") {
+        servo_bias_ = parameter.as_int();
+      } else if (name == "command_timeout_sec") {
+        command_timeout_sec_ = parameter.as_double();
+      } else if (name == "send_period_sec") {
+        send_period_sec_ = parameter.as_double();
+      }
+    }
+
+    send_params();
+    send_coefficient();
+
+    rcl_interfaces::msg::SetParametersResult result;
+    result.successful = true;
+    return result;
+  }
+
+  void encode_float(double value, uint8_t * destination)
+  {
+    const float float_value = static_cast<float>(value);
+    std::memcpy(destination, &float_value, sizeof(float_value));
+  }
+
+  void send_params()
+  {
+    std::array<uint8_t, 15> buffer{};
+    buffer[0] = kHead1;
+    buffer[1] = kHead2;
+    buffer[2] = 0x0F;
+    buffer[3] = kSendTypeParams;
+    buffer[4] = static_cast<uint8_t>((kp_ >> 8) & 0xFF);
+    buffer[5] = static_cast<uint8_t>(kp_ & 0xFF);
+    buffer[6] = static_cast<uint8_t>((ki_ >> 8) & 0xFF);
+    buffer[7] = static_cast<uint8_t>(ki_ & 0xFF);
+    buffer[8] = static_cast<uint8_t>((kd_ >> 8) & 0xFF);
+    buffer[9] = static_cast<uint8_t>(kd_ & 0xFF);
+    const auto linear_int = static_cast<int16_t>(linear_correction_ * 1000.0);
+    buffer[10] = static_cast<uint8_t>((linear_int >> 8) & 0xFF);
+    buffer[11] = static_cast<uint8_t>(linear_int & 0xFF);
+    const auto servo_int = static_cast<int16_t>(servo_bias_);
+    buffer[12] = static_cast<uint8_t>((servo_int >> 8) & 0xFF);
+    buffer[13] = static_cast<uint8_t>(servo_int & 0xFF);
+    buffer[14] = checksum(buffer.data(), buffer.size() - 1U);
+    write_bytes(buffer.data(), buffer.size());
+  }
+
+  void send_coefficient()
+  {
+    std::array<uint8_t, 21> buffer{};
+    buffer[0] = kHead1;
+    buffer[1] = kHead2;
+    buffer[2] = 0x15;
+    buffer[3] = kSendTypeCoefficient;
+    encode_float(coefficient_a_, buffer.data() + 4);
+    encode_float(coefficient_b_, buffer.data() + 8);
+    encode_float(coefficient_c_, buffer.data() + 12);
+    encode_float(coefficient_d_, buffer.data() + 16);
+    buffer[20] = checksum(buffer.data(), buffer.size() - 1U);
+    write_bytes(buffer.data(), buffer.size());
+  }
+
+  void send_velocity_timer()
+  {
+    double command_x = 0.0;
+    double command_y = 0.0;
+    double command_yaw = 0.0;
+    rclcpp::Time command_stamp(0, 0, get_clock()->get_clock_type());
+
+    {
+      std::scoped_lock lock(command_mutex_);
+      command_x = commanded_x_;
+      command_y = commanded_y_;
+      command_yaw = commanded_yaw_;
+      command_stamp = last_command_time_;
+    }
+
+    if ((now() - command_stamp).seconds() > command_timeout_sec_) {
+      command_x = 0.0;
+      command_y = 0.0;
+      command_yaw = 0.0;
+    }
+
+    std::array<uint8_t, 11> buffer{};
+    buffer[0] = kHead1;
+    buffer[1] = kHead2;
+    buffer[2] = 0x0B;
+    buffer[3] = kSendTypeVelocity;
+
+    const auto linear_x = static_cast<int16_t>(command_x * 1000.0);
+    const auto linear_y = static_cast<int16_t>(command_y * 1000.0);
+    const auto angular_z = static_cast<int16_t>(command_yaw * 1000.0);
+
+    buffer[4] = static_cast<uint8_t>((linear_x >> 8) & 0xFF);
+    buffer[5] = static_cast<uint8_t>(linear_x & 0xFF);
+    buffer[6] = static_cast<uint8_t>((linear_y >> 8) & 0xFF);
+    buffer[7] = static_cast<uint8_t>(linear_y & 0xFF);
+    buffer[8] = static_cast<uint8_t>((angular_z >> 8) & 0xFF);
+    buffer[9] = static_cast<uint8_t>(angular_z & 0xFF);
+    buffer[10] = checksum(buffer.data(), buffer.size() - 1U);
+    write_bytes(buffer.data(), buffer.size());
+  }
+
+  void write_bytes(const uint8_t * data, std::size_t size)
+  {
+    if (!serial_port_.is_open()) {
+      return;
+    }
+    std::scoped_lock lock(serial_mutex_);
+    boost::asio::write(serial_port_, boost::asio::buffer(data, size));
+  }
+
+  void read_exact(uint8_t * destination, std::size_t size)
+  {
+    std::scoped_lock lock(serial_mutex_);
+    boost::asio::read(serial_port_, boost::asio::buffer(destination, size));
+  }
+
+  void serial_task()
+  {
+    std::array<uint8_t, kMaxFrameSize> frame{};
+    uint8_t frame_size = 0;
+
+    enum class State { Head1, Head2, Size, Data, Checksum };
+    State state = State::Head1;
+
+    while (!stop_requested_.load() && rclcpp::ok()) {
+      try {
+        switch (state) {
+          case State::Head1:
+            read_exact(frame.data(), 1);
+            state = frame[0] == kHead1 ? State::Head2 : State::Head1;
+            break;
+          case State::Head2:
+            read_exact(frame.data() + 1, 1);
+            state = frame[1] == kHead2 ? State::Size : State::Head1;
+            break;
+          case State::Size:
+            read_exact(frame.data() + 2, 1);
+            frame_size = frame[2];
+            if (frame_size < 5U || frame_size > frame.size()) {
+              state = State::Head1;
+              break;
+            }
+            state = State::Data;
+            break;
+          case State::Data:
+            read_exact(frame.data() + 3, frame_size - 4U);
+            state = State::Checksum;
+            break;
+          case State::Checksum:
+            read_exact(frame.data() + frame_size - 1U, 1);
+            if (frame[frame_size - 1U] == checksum(frame.data(), frame_size - 1U)) {
+              handle_frame(frame.data(), frame_size);
+            }
+            state = State::Head1;
+            break;
+        }
+      } catch (const std::exception & exception) {
+        if (!stop_requested_.load()) {
+          RCLCPP_ERROR(get_logger(), "Serial receive loop stopped: %s", exception.what());
+        }
+        break;
+      }
+    }
+  }
+
+  void handle_frame(const uint8_t * data, std::size_t frame_size)
+  {
+    if (frame_size < 42U) {
+      return;
+    }
+
+    const auto current_time = now();
+    double delta_time = (current_time - last_receive_time_).seconds();
+    if (delta_time <= 1e-6) {
+      delta_time = 1e-3;
+    }
+    last_receive_time_ = current_time;
+
+    sensor_msgs::msg::Imu imu_msg;
+    imu_msg.header.stamp = current_time;
+    imu_msg.header.frame_id = imu_frame_id_;
+    imu_msg.angular_velocity.x = static_cast<double>(decode_int16(data[4], data[5])) / 32768.0 * 2000.0 / 180.0 * M_PI;
+    imu_msg.angular_velocity.y = static_cast<double>(decode_int16(data[6], data[7])) / 32768.0 * 2000.0 / 180.0 * M_PI;
+    imu_msg.angular_velocity.z = static_cast<double>(decode_int16(data[8], data[9])) / 32768.0 * 2000.0 / 180.0 * M_PI;
+    imu_msg.linear_acceleration.x = static_cast<double>(decode_int16(data[10], data[11])) / 32768.0 * 2.0 * 9.8;
+    imu_msg.linear_acceleration.y = static_cast<double>(decode_int16(data[12], data[13])) / 32768.0 * 2.0 * 9.8;
+    imu_msg.linear_acceleration.z = static_cast<double>(decode_int16(data[14], data[15])) / 32768.0 * 2.0 * 9.8;
+    const auto yaw_degrees = static_cast<double>(decode_int16(data[20], data[21])) / 10.0;
+    tf2::Quaternion imu_quaternion;
+    imu_quaternion.setRPY(0.0, 0.0, yaw_degrees / 180.0 * M_PI);
+    imu_msg.orientation = tf2::toMsg(imu_quaternion);
+    imu_msg.orientation_covariance = {1e6, 0.0, 0.0, 0.0, 1e6, 0.0, 0.0, 0.0, 0.05};
+    imu_msg.angular_velocity_covariance = {1e6, 0.0, 0.0, 0.0, 1e6, 0.0, 0.0, 0.0, 1e6};
+    imu_msg.linear_acceleration_covariance = {1e-2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    imu_pub_->publish(imu_msg);
+
+    const double odom_x = static_cast<double>(decode_int16(data[22], data[23])) / 1000.0;
+    const double odom_y = static_cast<double>(decode_int16(data[24], data[25])) / 1000.0;
+    const double odom_yaw = static_cast<double>(decode_int16(data[26], data[27])) / 1000.0;
+    const double delta_x = static_cast<double>(decode_int16(data[28], data[29])) / 1000.0;
+    const double delta_y = static_cast<double>(decode_int16(data[30], data[31])) / 1000.0;
+    const double delta_yaw = static_cast<double>(decode_int16(data[32], data[33])) / 1000.0;
+
+    tf2::Quaternion odom_quaternion;
+    odom_quaternion.setRPY(0.0, 0.0, odom_yaw);
+    geometry_msgs::msg::Quaternion odom_quaternion_msg = tf2::toMsg(odom_quaternion);
+
+    if (publish_odom_transform_) {
+      geometry_msgs::msg::TransformStamped transform;
+      transform.header.stamp = current_time;
+      transform.header.frame_id = odom_frame_id_;
+      transform.child_frame_id = base_frame_id_;
+      transform.transform.translation.x = odom_x;
+      transform.transform.translation.y = odom_y;
+      transform.transform.translation.z = 0.0;
+      transform.transform.rotation = odom_quaternion_msg;
+      tf_broadcaster_->sendTransform(transform);
+    }
+
+    nav_msgs::msg::Odometry odom_msg;
+    odom_msg.header.stamp = current_time;
+    odom_msg.header.frame_id = odom_frame_id_;
+    odom_msg.child_frame_id = base_frame_id_;
+    odom_msg.pose.pose.position.x = odom_x;
+    odom_msg.pose.pose.position.y = odom_y;
+    odom_msg.pose.pose.position.z = 0.0;
+    odom_msg.pose.pose.orientation = odom_quaternion_msg;
+    odom_msg.twist.twist.linear.x = delta_x / delta_time;
+    odom_msg.twist.twist.linear.y = delta_y / delta_time;
+    odom_msg.twist.twist.angular.z = delta_yaw / delta_time;
+    odom_msg.twist.covariance = {1e-9, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                 0.0, 1e-3, 1e-9, 0.0, 0.0, 0.0,
+                                 0.0, 0.0, 1e6, 0.0, 0.0, 0.0,
+                                 0.0, 0.0, 0.0, 1e6, 0.0, 0.0,
+                                 0.0, 0.0, 0.0, 0.0, 1e6, 0.0,
+                                 0.0, 0.0, 0.0, 0.0, 0.0, 0.1};
+    odom_msg.pose.covariance = {1e-9, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 1e-3, 1e-9, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 1e6, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 1e6, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 1e6, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0, 1e3};
+    odom_pub_->publish(odom_msg);
+
+    publish_motor_value(left_velocity_pub_, decode_int16(data[34], data[35]));
+    publish_motor_value(right_velocity_pub_, decode_int16(data[36], data[37]));
+    publish_motor_value(left_setpoint_pub_, decode_int16(data[38], data[39]));
+    publish_motor_value(right_setpoint_pub_, decode_int16(data[40], data[41]));
+  }
+
+  void publish_motor_value(
+    const rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr & publisher,
+    int16_t value)
+  {
+    std_msgs::msg::Int32 msg;
+    msg.data = value;
+    publisher->publish(msg);
+  }
+
+  boost::asio::io_service io_service_;
+  boost::asio::serial_port serial_port_;
+  std::mutex serial_mutex_;
+  std::mutex command_mutex_;
+  std::thread serial_thread_;
+  std::atomic<bool> stop_requested_{false};
+
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
+  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr left_velocity_pub_;
+  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr right_velocity_pub_;
+  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr left_setpoint_pub_;
+  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr right_setpoint_pub_;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_sub_;
+  rclcpp::TimerBase::SharedPtr send_timer_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
+
+  std::string port_name_;
+  int baud_rate_{};
+  bool publish_odom_transform_{};
+  std::string odom_frame_id_;
+  std::string base_frame_id_;
+  std::string imu_frame_id_;
+  double linear_correction_{};
+  double coefficient_a_{};
+  double coefficient_b_{};
+  double coefficient_c_{};
+  double coefficient_d_{};
+  int kp_{};
+  int ki_{};
+  int kd_{};
+  int servo_bias_{};
+  double command_timeout_sec_{};
+  double send_period_sec_{};
+
+  double commanded_x_{0.0};
+  double commanded_y_{0.0};
+  double commanded_yaw_{0.0};
+  rclcpp::Time last_command_time_;
+  rclcpp::Time last_receive_time_;
+};
+
+int main(int argc, char ** argv)
+{
+  rclcpp::init(argc, argv);
+  try {
+    auto node = std::make_shared<JetRacerSerialNode>();
+    rclcpp::spin(node);
+  } catch (const std::exception & exception) {
+    fprintf(stderr, "jetracer_hardware failed: %s\n", exception.what());
+  }
+  rclcpp::shutdown();
+  return 0;
+}

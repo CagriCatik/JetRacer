@@ -1,0 +1,14 @@
+adafruit-blinka>=8.0.0
+adafruit-circuitpython-neopixel>=6.0.0
+adafruit-circuitpython-ssd1306>=2.11.1
+gTTS>=2.5.1
+Jetson.GPIO>=2.1.7
+matplotlib>=3.6
+numpy>=1.23
+Pillow>=10.0.0
+smbus2>=0.4.3
+scipy>=1.8.0
+ultralytics>=8.0.0
+vosk>=0.3.32
+webrtcvad>=2.0.10
+websocket-client>=1.8.0

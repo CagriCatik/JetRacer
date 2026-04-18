@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>jetracer_localization</name>
+  <version>0.2.0</version>
+  <description>State estimation and localization package for JetRacer.</description>
+  <maintainer email="maintainers@example.com">JetRacer ROS 2 Maintainers</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>rclpy</depend>
+
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

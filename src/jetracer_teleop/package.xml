@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>jetracer_teleop</name>
+  <version>0.2.0</version>
+  <description>Manual control interfaces for JetRacer — keyboard and joystick teleoperation.</description>
+  <maintainer email="maintainers@example.com">JetRacer ROS 2 Maintainers</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Runtime dependencies for teleop_key.py and teleop_joy.py -->
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+
+  <!-- Launch infrastructure -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <!-- joy_node is bundled in the joy package -->
+  <exec_depend>joy</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

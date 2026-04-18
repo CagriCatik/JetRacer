@@ -1,0 +1,33 @@
+{
+    "name": "JetRacer ROS 2 Humble (Jetson Nano)",
+    "dockerComposeFile": "../docker-compose.yaml",
+    "service": "jetracer_ros2",
+    "workspaceFolder": "/workspaces/JetRacer-ROS2",
+    
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/bin/python3",
+                "python.analysis.extraPaths": [
+                    "/opt/ros/humble/lib/python3.10/site-packages",
+                    "/workspaces/JetRacer-ROS2/install/lib/python3.10/site-packages"
+                ],
+                "python.languageServer": "Pylance",
+                "[python]": {
+                    "editor.defaultFormatter": "ms-python.autopep8",
+                    "editor.formatOnSave": true
+                }
+            },
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.autopep8",
+                "ms-iot.vscode-ros"
+            ]
+        }
+    },
+    
+    "remoteUser": "root",
+    
+    "postCreateCommand": "rosdep update && rosdep install --from-paths src --ignore-src -r -y"
+}
