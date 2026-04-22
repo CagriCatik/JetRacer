@@ -20,22 +20,39 @@ def main():
     parser.add_argument("--data", type=str, default="dataset/data.yaml", help="Path to data.yaml")
     args = parser.parse_args()
 
-    if not os.path.exists(args.data):
-        console.print(f"[bold red]Error: {args.data} not found.[/bold red]")
+    # Normalize the data path relative to the toolkit root
+    data_path = Path(args.data).absolute()
+    if not data_path.exists():
+        # Try relative to CWD
+        data_path = (Path.cwd() / args.data).absolute()
+
+    if not data_path.exists():
+        console.print(f"[bold red]Error: {data_path} not found.[/bold red]")
         return
 
-    with open(args.data, 'r') as f:
+    with open(data_path, 'r') as f:
         data_cfg = yaml.safe_load(f)
 
     classes = data_cfg['names']
-    train_path = os.path.join(os.path.dirname(args.data), data_cfg['train'].replace('../', ''))
     
-    # Path to labels
-    label_path = train_path.replace('images', 'labels')
+    # Correct path resolution relative to where data.yaml is located
+    # In YOLO, images and labels are siblings
+    data_dir = data_path.parent
+    train_relative = data_cfg['train']
+    
+    # Resolve the absolute path of the training images
+    train_img_path = (data_dir / train_relative).resolve()
+    
+    # Path to labels (replace 'images' with 'labels' in the folder name)
+    label_path = Path(str(train_img_path).replace('images', 'labels'))
     
     console.print(f"[bold blue]Analyzing training split at:[/bold blue] [cyan]{label_path}[/cyan]")
     
-    label_files = list(Path(label_path).glob('*.txt'))
+    if not label_path.exists():
+        console.print(f"[bold red]Error: Label directory not found at {label_path}[/bold red]")
+        return
+
+    label_files = list(label_path.glob('*.txt'))
     class_counts = Counter()
     total_boxes = 0
 
@@ -65,8 +82,11 @@ def main():
     console.print(f"\n[bold]Total Annotations:[/bold] [cyan]{total_boxes}[/cyan]")
     
     # Expert Advice
-    if any(count < (total_boxes / len(classes) * 0.2) for count in class_counts.values()):
-        console.print("\n[bold yellow]ADVICE[/bold yellow]: Significant class imbalance detected. Consider adding more images for rare classes or using oversampling.")
+    if total_boxes > 0:
+        if any(count < (total_boxes / len(classes) * 0.2) for count in class_counts.values()):
+            console.print("\n[bold yellow]ADVICE[/bold yellow]: Significant class imbalance detected. Consider adding more images for rare classes or using oversampling.")
+    else:
+        console.print("\n[bold red]WARNING[/bold red]: No annotations found. Check your dataset folder structure.")
 
 if __name__ == "__main__":
     main()
