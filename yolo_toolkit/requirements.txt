@@ -1,7 +1,6 @@
 # JetRacer Expert ML Requirements (3080 GPU Optimized)
 # ---------------------------------------------------
 --extra-index-url https://download.pytorch.org/whl/cu121
---extra-index-url https://pypi.ngc.nvidia.com
 
 # Core PyTorch with CUDA 12.1 Support (High Performance)
 torch
@@ -18,11 +17,6 @@ cvbridge3>=1.0.0
 onnx==1.16.1
 onnxslim==0.1.34
 onnx-simplifier>=0.4.36
-
-# Expert Tuning & Quantization (PC-Safe)
-nvidia-pyindex
-nvidia-tensorrt
-pycuda
 
 # Intelligence & Analysis Tools
 rich>=13.7.0
