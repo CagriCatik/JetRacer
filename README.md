@@ -48,17 +48,32 @@ This repository has undergone a comprehensive architectural audit and hardening 
 
 ---
 
+## Deployment Guide
+
+### 1. Containerized Setup
+Prepare your Jetson Nano using the [Ubuntu 20.04 Workaround](docs/00_ROS2-Jetson-Nano.md).
+
 ```bash
+# Build and enter the hardened workspace
+docker compose up -d --build
+docker exec -it jetracer_workspace bash
+
+# Build the C++ components
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+source install/setup.bash
+
 # Register the one-button autostart service
 bash install_service.sh
 ```
 
-### 2. Manual Driving (Always-on)
+## Operation Guide
+
+### 1. Manual Driving (Always-on)
 The robot boots into **Sentinel Mode**. You can drive manually immediately by holding **L2** (Deadman Switch).
 *   **Steering**: Left Stick
 *   **Throttle**: Right Stick (Vertical)
 
-### 3. One-Button Mission Control
+### 2. One-Button Mission Control
 Trigger full autonomous launches directly from the gamepad:
 
 | Mission | Combo | Description |
@@ -67,14 +82,14 @@ Trigger full autonomous launches directly from the gamepad:
 | **Mapping** | `SELECT` + `X` | SLAM + Nav2 Grid Mapping. |
 | **E-Stop** | `MODE` | Immediate mission teardown and stop. |
 
-### 2. Launching Autonomy
-Launch the core hardware and safety stack:
-```bash
-ros2 launch jetracer_bringup jetracer.launch.py
-```
+### 3. Manual Launching (Advanced)
+If you wish to launch specific stacks manually without the sentinel:
 
-Launch the full autonomous behavior suite:
 ```bash
+# Core hardware and safety stack only
+ros2 launch jetracer_bringup jetracer.launch.py
+
+# Full autonomous behavior suite
 ros2 launch jetracer_bringup autonomy.launch.py
 ```
 
