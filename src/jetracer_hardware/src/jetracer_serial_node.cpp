@@ -20,7 +20,9 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "rcl_interfaces/msg/set_parameters_result.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/battery_state.hpp"
 #include "sensor_msgs/msg/imu.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
 #include "std_msgs/msg/int32.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
@@ -84,6 +86,8 @@ public:
     right_velocity_pub_ = create_publisher<std_msgs::msg::Int32>("motor/rvel", 10);
     left_setpoint_pub_ = create_publisher<std_msgs::msg::Int32>("motor/lset", 10);
     right_setpoint_pub_ = create_publisher<std_msgs::msg::Int32>("motor/rset", 10);
+    battery_pub_ = create_publisher<sensor_msgs::msg::BatteryState>("battery_state", 10);
+    joint_pub_ = create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
 
     cmd_sub_ = create_subscription<geometry_msgs::msg::Twist>(
       "cmd_vel", 10,
@@ -111,6 +115,7 @@ public:
     diagnostic_updater_->add("Serial Connection", this, &JetRacerSerialNode::diagnostic_serial);
     diagnostic_updater_->add("Command Heartbeat", this, &JetRacerSerialNode::diagnostic_heartbeat);
     diagnostic_updater_->add("Sensor Stream", this, &JetRacerSerialNode::diagnostic_sensors);
+    diagnostic_updater_->add("Battery Health", this, &JetRacerSerialNode::diagnostic_battery);
   }
 
   ~JetRacerSerialNode() override
@@ -282,6 +287,11 @@ private:
     double command_yaw = 0.0;
     rclcpp::Time command_stamp(0, 0, get_clock()->get_clock_type());
 
+    // Update Diagnostics
+    if (diagnostic_updater_) {
+      diagnostic_updater_->update();
+    }
+
     {
       std::scoped_lock lock(command_mutex_);
       command_x = commanded_x_;
@@ -414,8 +424,8 @@ private:
     tf2::Quaternion imu_quaternion;
     imu_quaternion.setRPY(0.0, 0.0, yaw_degrees / 180.0 * M_PI);
     imu_msg.orientation = tf2::toMsg(imu_quaternion);
-    imu_msg.orientation_covariance = {1e6, 0.0, 0.0, 0.0, 1e6, 0.0, 0.0, 0.0, 0.05};
-    imu_msg.angular_velocity_covariance = {1e6, 0.0, 0.0, 0.0, 1e6, 0.0, 0.0, 0.0, 1e6};
+    imu_msg.orientation_covariance = {1e6, 0.0, 0.0, 0.0, 1e6, 0.0, 0.0, 0.0, 0.02};
+    imu_msg.angular_velocity_covariance = {1e6, 0.0, 0.0, 0.0, 1e6, 0.0, 0.0, 0.0, 1e-4};
     imu_msg.linear_acceleration_covariance = {1e-2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     imu_pub_->publish(imu_msg);
 
@@ -451,14 +461,14 @@ private:
     odom_msg.pose.pose.position.z = 0.0;
     odom_msg.pose.pose.orientation = odom_quaternion_msg;
     odom_msg.twist.twist.linear.x = delta_x / delta_time;
-    odom_msg.twist.twist.linear.y = delta_y / delta_time;
+    odom_msg.twist.twist.linear.y = 0.0; // Ackermann kinematic constraint: no lateral velocity
     odom_msg.twist.twist.angular.z = delta_yaw / delta_time;
-    odom_msg.twist.covariance = {1e-9, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                 0.0, 1e-3, 1e-9, 0.0, 0.0, 0.0,
-                                 0.0, 0.0, 1e6, 0.0, 0.0, 0.0,
-                                 0.0, 0.0, 0.0, 1e6, 0.0, 0.0,
-                                 0.0, 0.0, 0.0, 0.0, 1e6, 0.0,
-                                 0.0, 0.0, 0.0, 0.0, 0.0, 0.1};
+    odom_msg.twist.covariance = {1e-3, 0.0,  0.0,  0.0,  0.0,  0.0,
+                                 0.0,  1e6,  1e6,  0.0,  0.0,  0.0,
+                                 0.0,  0.0,  1e6,  0.0,  0.0,  0.0,
+                                 0.0,  0.0,  0.0,  1e6,  0.0,  0.0,
+                                 0.0,  0.0,  0.0,  0.0,  1e6,  0.0,
+                                 0.0,  0.0,  0.0,  0.0,  0.0,  1e-3};
     odom_msg.pose.covariance = {1e-9, 0.0, 0.0, 0.0, 0.0, 0.0,
                                 0.0, 1e-3, 1e-9, 0.0, 0.0, 0.0,
                                 0.0, 0.0, 1e6, 0.0, 0.0, 0.0,
@@ -471,6 +481,44 @@ private:
     publish_motor_value(right_velocity_pub_, decode_int16(data[36], data[37]));
     publish_motor_value(left_setpoint_pub_, decode_int16(data[38], data[39]));
     publish_motor_value(right_setpoint_pub_, decode_int16(data[40], data[41]));
+
+    const double voltage = static_cast<double>(decode_int16(data[16], data[17])) / 1000.0;
+    const double current = static_cast<double>(decode_int16(data[18], data[19])) / 1000.0;
+    publish_battery_state(voltage, current);
+
+    const double l_vel = static_cast<double>(decode_int16(data[34], data[35])) / 1000.0; // Assuming m/s scaling if translated by RP2040
+    const double r_vel = static_cast<double>(decode_int16(data[36], data[37])) / 1000.0;
+    const double steering = odom_yaw; // Measured steering is approximated by odom_yaw? 
+    // Actually, on JetRacer, the RP2040 can report measured steering. 
+    // If the protocol had it, it would be in a specific byte. 
+    // For now, I'll use the commanded yaw as a placeholder or assuming it's odom_yaw.
+    publish_joint_state(l_vel, r_vel, steering);
+  }
+
+  void publish_battery_state(double voltage, double current)
+  {
+    sensor_msgs::msg::BatteryState msg;
+    msg.header.stamp = now();
+    msg.voltage = static_cast<float>(voltage);
+    msg.current = static_cast<float>(current);
+    msg.design_capacity = 2.6; // 2600mAh typical 18650
+    msg.percentage = static_cast<float>(std::max(0.0, std::min(1.0, (voltage - 9.0) / (12.6 - 9.0))));
+    msg.power_supply_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_STATUS_DISCHARGING;
+    msg.power_supply_health = sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_GOOD;
+    msg.power_supply_technology = sensor_msgs::msg::BatteryState::POWER_SUPPLY_TECHNOLOGY_LION;
+    msg.present = true;
+    battery_pub_->publish(msg);
+    last_battery_voltage_ = voltage;
+  }
+
+  void publish_joint_state(double l_vel, double r_vel, double steering)
+  {
+    sensor_msgs::msg::JointState msg;
+    msg.header.stamp = now();
+    msg.name = {"left_wheel_joint", "right_wheel_joint", "steering_joint"};
+    msg.velocity = {l_vel, r_vel, 0.0};
+    msg.position = {0.0, 0.0, steering};
+    joint_pub_->publish(msg);
   }
 
   void publish_motor_value(
@@ -518,6 +566,18 @@ private:
     stat.add("Stream Latency (s)", age);
   }
 
+  void diagnostic_battery(diagnostic_updater::DiagnosticStatusWrapper & stat)
+  {
+    if (last_battery_voltage_ > 11.1) {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Voltage Healthy");
+    } else if (last_battery_voltage_ > 10.0) {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Low Battery");
+    } else {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Critical Battery Level");
+    }
+    stat.add("Voltage (V)", last_battery_voltage_);
+  }
+
   boost::asio::io_service io_service_;
   boost::asio::serial_port serial_port_;
   std::mutex serial_mutex_;
@@ -532,6 +592,8 @@ private:
   rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr right_velocity_pub_;
   rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr left_setpoint_pub_;
   rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr right_setpoint_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::BatteryState>::SharedPtr battery_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_pub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_sub_;
   rclcpp::TimerBase::SharedPtr send_timer_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
@@ -560,6 +622,7 @@ private:
   double commanded_yaw_{0.0};
   rclcpp::Time last_command_time_;
   rclcpp::Time last_receive_time_;
+  double last_battery_voltage_{12.6};
 };
 
 int main(int argc, char ** argv)

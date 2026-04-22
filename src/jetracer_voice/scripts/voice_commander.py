@@ -39,19 +39,8 @@ class VoiceCommanderNode(Node):
         package_share_dir = get_package_share_directory('jetracer_voice')
         default_model = os.path.join(package_share_dir, 'models', 'vosk-model-small-en-us-0.15')
 
-        self.declare_parameter('model_path', default_model)
-        self.declare_parameter('kitchen_x', 2.0)
-        self.declare_parameter('kitchen_y', 1.5)
-
-        model_path: str = str(self.get_parameter('model_path').value)
-        
-        # Path Portability check
-        if not os.path.isabs(model_path):
-            model_path = os.path.join(package_share_dir, 'models', model_path)
-            
-        self.model_path = model_path
-        self._kitchen_x: float = float(self.get_parameter('kitchen_x').value)
-        self._kitchen_y: float = float(self.get_parameter('kitchen_y').value)
+        self._load_params()
+        self.add_on_set_parameters_callback(self._param_callback)
         
         # Audio Initialization wrapped in a sandboxed try/except to prevent violent core dumps
         try:
@@ -79,6 +68,37 @@ class VoiceCommanderNode(Node):
         self.timer: Timer = self.create_timer(0.1, self._listen)
         
         self.get_logger().info("Offline Voice Commander Active. Listening for 'kitchen'...")
+
+    def _load_params(self, updates: dict[str, object] | None = None) -> None:
+        if updates is None:
+            updates = {}
+
+        def fetch(name: str):
+            if name in updates:
+                return updates[name]
+            return self.get_parameter(name).value
+
+        # Resolve package models directory
+        package_share_dir = get_package_share_directory('jetracer_voice')
+        
+        m_path = str(fetch('model_path'))
+        if not os.path.isabs(m_path):
+            m_path = os.path.join(package_share_dir, 'models', m_path)
+            
+        self._model_path = m_path
+        self._kitchen_x = float(fetch('kitchen_x'))
+        self._kitchen_y = float(fetch('kitchen_y'))
+
+    def _param_callback(self, params) -> SetParametersResult:
+        from rcl_interfaces.msg import SetParametersResult
+        updated = {p.name: p.value for p in params}
+        
+        # model_path is read-only at runtime to prevent reload crashes
+        if 'model_path' in updated and str(updated['model_path']) != self._model_path:
+             return SetParametersResult(successful=False, reason="model_path is read-only")
+
+        self._load_params(updates=updated)
+        return SetParametersResult(successful=True)
 
     def _listen(self) -> None:
         """

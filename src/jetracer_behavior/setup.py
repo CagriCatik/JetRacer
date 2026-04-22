@@ -1,3 +1,5 @@
+import os
+from glob import glob
 from setuptools import setup, find_packages
 
 package_name = 'jetracer_behavior'
@@ -10,6 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -22,7 +25,8 @@ setup(
         'console_scripts': [
             'semantic_behavior = jetracer_behavior.semantic_behavior:main',
             'collision_assurance = jetracer_behavior.collision_assurance:main',
-            'slip_monitor = jetracer_behavior.slip_monitor:main'
+            'slip_monitor = jetracer_behavior.slip_monitor:main',
+            'safety_supervisor = jetracer_behavior.safety_supervisor:main'
         ],
     },
 )

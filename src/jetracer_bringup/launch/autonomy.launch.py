@@ -10,6 +10,8 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     config_file = LaunchConfiguration('config_file')
     start_camera = LaunchConfiguration('start_camera')
+    start_base = LaunchConfiguration('start_base')
+    start_lidar = LaunchConfiguration('start_lidar')
     use_rviz = LaunchConfiguration('use_rviz')
     rviz_profile = LaunchConfiguration('rviz_profile')
     rviz_config = LaunchConfiguration('rviz_config')
@@ -30,6 +32,16 @@ def generate_launch_description():
             'start_camera',
             default_value='true',
             description='Start the CSI camera pipeline required by lane/yolo nodes.',
+        ),
+        DeclareLaunchArgument(
+            'start_base',
+            default_value='true',
+            description='Start the base robot hardware stack (serial, odom, EKF, twist_mux).',
+        ),
+        DeclareLaunchArgument(
+            'start_lidar',
+            default_value='true',
+            description='Start the RPLidar driver.',
         ),
         DeclareLaunchArgument(
             'use_rviz',
@@ -55,6 +67,30 @@ def generate_launch_description():
             'use_sim_time',
             default_value='false',
             description='Use simulation time for RViz.',
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('jetracer_bringup'),
+                    'launch',
+                    'jetracer.launch.py',
+                ])
+            ),
+            condition=IfCondition(start_base),
+            launch_arguments={
+                'config_file': config_file,
+                'use_rviz': 'false',  # We handle RViz in autonomy.launch.py
+            }.items(),
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('jetracer_hardware'),
+                    'launch',
+                    'lidar.launch.py',
+                ])
+            ),
+            condition=IfCondition(start_lidar),
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(

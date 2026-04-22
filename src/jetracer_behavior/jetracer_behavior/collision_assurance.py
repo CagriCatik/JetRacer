@@ -56,14 +56,23 @@ class CollisionAssuranceNode(Node):
 
         self.get_logger().info("LiDAR Collision Assurance initialized.")
 
-    def _load_params(self) -> None:
+    def _load_params(self, updates: dict[str, object] | None = None) -> None:
         """Translates degrees into radians and updates class constraints."""
+        if updates is None:
+            updates = {}
+
+        def fetch(name: str):
+            if name in updates:
+                return updates[name]
+            return self.get_parameter(name).value
+
         # A 30 degree cone implies ±15 degrees from straight forward.
-        self._cone_rad: float = math.radians(float(self.get_parameter('cone_angle_deg').value) / 2.0)
-        self._min_dist: float = float(self.get_parameter('min_distance_m').value)
+        self._cone_rad = math.radians(float(fetch('cone_angle_deg')) / 2.0)
+        self._min_dist = float(fetch('min_distance_m'))
 
     def _param_callback(self, params) -> SetParametersResult:
-        self._load_params()
+        updated = {p.name: p.value for p in params}
+        self._load_params(updates=updated)
         return SetParametersResult(successful=True)
 
     def _cmd_callback(self, msg: Twist) -> None:

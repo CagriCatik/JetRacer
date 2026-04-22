@@ -168,44 +168,52 @@ class LaneFollowingNode(Node):
             f'max_steer={self._max_steering_rad:.2f} rad way_type={self._way_type}'
         )
 
-    def _load_params(self) -> None:
-        self._start = bool(self.get_parameter('start').value)
-        self._max_speed_ms = float(self.get_parameter('max_speed_ms').value)
-        self._min_speed_ms = float(self.get_parameter('min_speed_ms').value)
-        self._kp = float(self.get_parameter('kp').value)
-        self._ki = float(self.get_parameter('ki').value)
-        self._kd = float(self.get_parameter('kd').value)
-        self._integral_windup_limit = float(self.get_parameter('integral_windup_limit').value)
+    def _load_params(self, updates: dict[str, object] | None = None) -> None:
+        if updates is None:
+            updates = {}
 
-        self._max_steering_rad = float(self.get_parameter('max_steering_rad').value)
+        def fetch(name: str):
+            if name in updates:
+                return updates[name]
+            return self.get_parameter(name).value
+
+        self._start = bool(fetch('start'))
+        self._max_speed_ms = float(fetch('max_speed_ms'))
+        self._min_speed_ms = float(fetch('min_speed_ms'))
+        self._kp = float(fetch('kp'))
+        self._ki = float(fetch('ki'))
+        self._kd = float(fetch('kd'))
+        self._integral_windup_limit = float(fetch('integral_windup_limit'))
+
+        self._max_steering_rad = float(fetch('max_steering_rad'))
         self._lateral_controller_type = str(
-            self.get_parameter('lateral_controller_type').value
+            fetch('lateral_controller_type')
         ).strip().lower()
 
-        self._gain_constant = float(self.get_parameter('gain_constant').value)
-        self._damping_constant = float(self.get_parameter('damping_constant').value)
+        self._gain_constant = float(fetch('gain_constant'))
+        self._damping_constant = float(fetch('damping_constant'))
 
-        self._mpc_horizon = int(self.get_parameter('mpc_horizon').value)
-        self._mpc_dt = float(self.get_parameter('mpc_dt').value)
-        self._mpc_wheelbase = float(self.get_parameter('mpc_wheelbase').value)
-        self._mpc_q_cte = float(self.get_parameter('mpc_q_cte').value)
-        self._mpc_q_heading = float(self.get_parameter('mpc_q_heading').value)
-        self._mpc_q_terminal = float(self.get_parameter('mpc_q_terminal').value)
-        self._mpc_r_steer = float(self.get_parameter('mpc_r_steer').value)
-        self._mpc_r_steer_rate = float(self.get_parameter('mpc_r_steer_rate').value)
-        self._mpc_cte_scale_px = float(self.get_parameter('mpc_cte_scale_px').value)
-        self._mpc_speed_scale_ms = float(self.get_parameter('mpc_speed_scale_ms').value)
-        self._mpc_min_speed_ms = float(self.get_parameter('mpc_min_speed_ms').value)
+        self._mpc_horizon = int(fetch('mpc_horizon'))
+        self._mpc_dt = float(fetch('mpc_dt'))
+        self._mpc_wheelbase = float(fetch('mpc_wheelbase'))
+        self._mpc_q_cte = float(fetch('mpc_q_cte'))
+        self._mpc_q_heading = float(fetch('mpc_q_heading'))
+        self._mpc_q_terminal = float(fetch('mpc_q_terminal'))
+        self._mpc_r_steer = float(fetch('mpc_r_steer'))
+        self._mpc_r_steer_rate = float(fetch('mpc_r_steer_rate'))
+        self._mpc_cte_scale_px = float(fetch('mpc_cte_scale_px'))
+        self._mpc_speed_scale_ms = float(fetch('mpc_speed_scale_ms'))
+        self._mpc_min_speed_ms = float(fetch('mpc_min_speed_ms'))
 
-        self._luminance_threshold = float(self.get_parameter('luminance_threshold').value)
-        self._roi_top_y = float(self.get_parameter('roi_top_y').value)
-        self._roi_top_width = float(self.get_parameter('roi_top_width').value)
+        self._luminance_threshold = float(fetch('luminance_threshold'))
+        self._roi_top_y = float(fetch('roi_top_y'))
+        self._roi_top_width = float(fetch('roi_top_width'))
 
-        self._num_waypoints = int(self.get_parameter('num_waypoints').value)
-        self._way_type = str(self.get_parameter('way_type').value)
-        self._smoothing_beta = float(self.get_parameter('smoothing_beta').value)
+        self._num_waypoints = int(fetch('num_waypoints'))
+        self._way_type = str(fetch('way_type'))
+        self._smoothing_beta = float(fetch('smoothing_beta'))
 
-        self._publish_debug = bool(self.get_parameter('publish_debug_image').value)
+        self._publish_debug = bool(fetch('publish_debug_image'))
 
         self._integral_windup_limit = max(0.0, self._integral_windup_limit)
         self._max_steering_rad = max(0.0, self._max_steering_rad)
@@ -329,7 +337,7 @@ class LaneFollowingNode(Node):
 
         previous_controller = self._lateral_controller_type
 
-        self._load_params()
+        self._load_params(updates=updated)
         if self._min_speed_ms > self._max_speed_ms:
             self.get_logger().warn(
                 f'min_speed_ms ({self._min_speed_ms:.3f}) > max_speed_ms '

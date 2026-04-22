@@ -43,6 +43,8 @@ install(TARGETS jetracer_serial_node
 install(PROGRAMS
   scripts/calibrate_linear.py
   scripts/laser_filter.py
+  scripts/thermal_monitor.py
+  scripts/oled_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

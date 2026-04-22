@@ -70,19 +70,28 @@ class SemanticBehaviorNode(Node):
 
         self.get_logger().info("Semantic behavior node initialized and scanning.")
 
-    def _load_params(self) -> None:
+    def _load_params(self, updates: dict[str, object] | None = None) -> None:
         """Internal method to map ROS 2 parameters to class constants."""
-        self._trigger_class: str = str(self.get_parameter('trigger_class_name').value).lower()
-        self._cam_w: float = float(self.get_parameter('camera_width').value)
-        self._cam_h: float = float(self.get_parameter('camera_height').value)
-        self._trigger_pct: float = float(self.get_parameter('box_size_trigger_pct').value)
-        self._stop_duration: float = float(self.get_parameter('stop_duration_sec').value)
-        self._cooldown_duration: float = float(self.get_parameter('cooldown_sec').value)
-        self._frame_area: float = self._cam_w * self._cam_h
+        if updates is None:
+            updates = {}
+
+        def fetch(name: str):
+            if name in updates:
+                return updates[name]
+            return self.get_parameter(name).value
+
+        self._trigger_class = str(fetch('trigger_class_name')).lower()
+        self._cam_w = float(fetch('camera_width'))
+        self._cam_h = float(fetch('camera_height'))
+        self._trigger_pct = float(fetch('box_size_trigger_pct'))
+        self._stop_duration = float(fetch('stop_duration_sec'))
+        self._cooldown_duration = float(fetch('cooldown_sec'))
+        self._frame_area = self._cam_w * self._cam_h
 
     def _param_callback(self, params) -> SetParametersResult:
         """Dynamic reconfigure callback."""
-        self._load_params()
+        updated = {p.name: p.value for p in params}
+        self._load_params(updates=updated)
         return SetParametersResult(successful=True)
 
     def _detection_callback(self, msg: Detection2DArray) -> None:

@@ -81,19 +81,30 @@ class YoloDetectionNode(Node):
 
         self.get_logger().info('YOLO Semantic Parser Online.')
 
-    def _load_params(self) -> None:
-        self._model_path: str = str(self.get_parameter('model_path').value)
-        self._conf_thres: float = float(self.get_parameter('conf_thres').value)
-        self._device: str = str(self.get_parameter('device').value)
-        self._publish_debug: bool = bool(self.get_parameter('publish_debug').value)
+    def _load_params(self, updates: dict[str, object] | None = None) -> None:
+        if updates is None:
+            updates = {}
+
+        def fetch(name: str):
+            if name in updates:
+                return updates[name]
+            return self.get_parameter(name).value
+
+        self._model_path = str(fetch('model_path'))
+        self._conf_thres = float(fetch('conf_thres'))
+        self._device = str(fetch('device'))
+        self._publish_debug = bool(fetch('publish_debug'))
 
     def _param_callback(self, params) -> SetParametersResult:
+        updated = {p.name: p.value for p in params}
         previous_model_path = self._model_path
-        self._load_params()
-        if self._model_path != previous_model_path:
-            self._model_path = previous_model_path
+        
+        # Check if model_path is being changed
+        if 'model_path' in updated and str(updated['model_path']) != previous_model_path:
             self.get_logger().warn("Expert Policy: Blocking dynamic model swapping to prevent CUDA thread locks.")
             return SetParametersResult(successful=False, reason="model_path is read-only")
+
+        self._load_params(updates=updated)
         return SetParametersResult(successful=True)
 
     def _warmup_model(self) -> None:

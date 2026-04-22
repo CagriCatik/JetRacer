@@ -25,10 +25,10 @@ amcl:
     recovery_alpha_fast: 0.0
     recovery_alpha_slow: 0.0
     resample_interval: 1
-    # CRITICAL FIX: JetRacer uses Ackermann steering, not differential drive.
-    # DifferentialMotionModel diverges at turns. OmniMotionModel is the
-    # best Nav2 approximation for car-like robots.
-    robot_model_type: nav2_amcl::OmniMotionModel
+    # CRITICAL FIX: JetRacer uses Ackermann steering.
+    # DifferentialMotionModel is the standard Nav2 approximation for Ackermann
+    # chassis when constrained to non-lateral motion.
+    robot_model_type: nav2_amcl::DifferentialMotionModel
     save_pose_rate: 0.5
     scan_topic: scan
     set_initial_pose: false
@@ -111,7 +111,7 @@ controller_server:
       stateful: true
     FollowPath:
       plugin: nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
-      desired_linear_vel: 0.6
+      desired_linear_vel: 0.35  # SYNC: Matches hardware autonomous safe limit
       lookahead_dist: 0.4
       min_lookahead_dist: 0.2
       max_lookahead_dist: 0.8
@@ -162,7 +162,7 @@ global_costmap:
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         cost_scaling_factor: 5.0
-        inflation_radius: 0.20
+        inflation_radius: 0.40
       always_send_full_costmap: true
 
 local_costmap:
@@ -194,7 +194,7 @@ local_costmap:
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         cost_scaling_factor: 5.0
-        inflation_radius: 0.20
+        inflation_radius: 0.40
       always_send_full_costmap: true
 
 map_server:

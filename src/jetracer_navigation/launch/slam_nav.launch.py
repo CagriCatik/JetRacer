@@ -55,6 +55,28 @@ def generate_launch_description() -> LaunchDescription:
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 PathJoinSubstitution([
+                    FindPackageShare('jetracer_bringup'),
+                    'launch',
+                    'jetracer.launch.py',
+                ])
+            ),
+            launch_arguments={
+                'config_file': config_file,
+                'use_rviz': 'false',
+            }.items(),
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('jetracer_hardware'),
+                    'launch',
+                    'lidar.launch.py',
+                ])
+            ),
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
                     FindPackageShare('jetracer_navigation'),
                     'launch',
                     'slam.launch.py',

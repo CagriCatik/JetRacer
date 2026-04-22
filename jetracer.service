@@ -1,0 +1,17 @@
+[Unit]
+Description=JetRacer ROS 2 Sentinel Service
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mccat
+WorkingDirectory=/Users/mccat/Desktop/JetRacer
+ExecStart=/bin/bash /Users/mccat/Desktop/JetRacer/jetracer_boot.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

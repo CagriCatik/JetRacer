@@ -61,6 +61,11 @@ Use this portal as the canonical operations guide for setup, deployment, and run
     <span>Real-time adjustments via Foxglove, CLI, and RQT.</span>
   </a>
 
+  <a class="jr-card" href="11_Operational_Guide/">
+    <strong>11. Operational Guide: </strong>
+    <span>Startup, Mission Control, and Gamepad procedures.</span>
+  </a>
+
 </div>
 
 ## Mermaid Rendering Check

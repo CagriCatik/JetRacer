@@ -30,6 +30,13 @@ def generate_launch_description() -> LaunchDescription:
         value_type=str,
     )
 
+    oled_node = Node(
+        package='jetracer_hardware',
+        executable='oled_node.py',
+        name='oled_node',
+        output='screen'
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument(
             'hardware_params_file',
@@ -150,4 +157,5 @@ def generate_launch_description() -> LaunchDescription:
                 'use_sim_time': use_sim_time,
             }.items(),
         ),
+        oled_node,
     ])

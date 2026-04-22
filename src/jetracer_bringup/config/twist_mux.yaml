@@ -7,9 +7,10 @@
 #
 # All sources have a timeout so the car stops if the topic goes silent.
 #
-# NOTE: lane_following and nav2 outputs are RAW yaw-rate Twist.
-#       cmd_vel_to_steering.py must subscribe to the twist_mux output
-#       to convert yaw-rate → Ackermann steering angle.
+# NOTE: All inputs are STEERING-ANGLE Twists.
+#       Conversion from yaw-rate rad/s to steering angle rad 
+#       is handled by individual nodes (lane_following) or 
+#       the bridge node (cmd_vel_to_steering).
 
 twist_mux:
   ros__parameters:

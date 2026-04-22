@@ -30,6 +30,7 @@ class SlipMonitorNode(Node):
         self.declare_parameter('window_size', 5)        # Number of samples to average for smoothing
 
         self._load_params()
+        self.add_on_set_parameters_callback(self._param_callback)
         
         # Networking
         self._imu_sub = self.create_subscription(
@@ -48,10 +49,24 @@ class SlipMonitorNode(Node):
         
         self.get_logger().info("Wheel Slip Monitor initialized.")
 
-    def _load_params(self) -> None:
-        self._threshold = float(self.get_parameter('diff_threshold').value)
-        self._min_speed = float(self.get_parameter('min_velocity').value)
-        self._window = int(self.get_parameter('window_size').value)
+    def _load_params(self, updates: dict[str, object] | None = None) -> None:
+        if updates is None:
+            updates = {}
+
+        def fetch(name: str):
+            if name in updates:
+                return updates[name]
+            return self.get_parameter(name).value
+
+        self._threshold = float(fetch('diff_threshold'))
+        self._min_speed = float(fetch('min_velocity'))
+        self._window = int(fetch('window_size'))
+
+    def _param_callback(self, params) -> SetParametersResult:
+        from rcl_interfaces.msg import SetParametersResult
+        updated = {p.name: p.value for p in params}
+        self._load_params(updates=updated)
+        return SetParametersResult(successful=True)
 
     def _imu_callback(self, msg: Imu) -> None:
         self._last_imu_yaw_rate = msg.angular_velocity.z

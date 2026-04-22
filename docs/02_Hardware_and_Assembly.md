@@ -11,10 +11,12 @@ The JetRacer ROS 2 platform is built atop the mechanical chassis provided by the
 | **RP2040 Microcontroller** | Acts as the real-time embedded motor driver handling I2C signals. | I2C |
 | **Sony IMX219 (8MP)** | The physical eye of the car tracking lines and objects. | CSI Ribbon Cable |
 | **RPLidar A1M8** | 360° laser scanner providing depth and maps up to 12 meters away. | USB (Serial) |
-| **BNO085 AHRS IMU** | 9-DOF Absolute Orientation Sensor. Prevents the SLAM from confusing angular drift. | I2C / SPI |
+| **MPU9250 AHRS IMU** | 9-DOF Absolute Orientation Sensor. Interfaced via RP2040 Serial Bridge. | Serial (via RP2040) |
+| **INA219 Monitor** | Precise Voltage/Current sensing for power health. | I2C (via RP2040) |
+| **SSD1306 OLED** | Real-time status display (IP, Battery, Faults). | I2C (Direct to Jetson) |
 | **Wheel Encoders** | Hall-effect sensors determining raw physical forward momentum (Odometry). | GPIO -> RP2040 |
 | **USB Microphone** | Allows voice-activated routing commands. | USB |
-| **Standard Wireless Gamepad** | Teleoperation and Deadman-switch override. | Bluetooth / USB |
+| **Standard Wireless Gamepad** | Teleoperation, Deadman-switch, and Mission Control Sentinel. | Bluetooth / USB |
 
 ## Physical Architecture and Mounting
 
@@ -27,13 +29,15 @@ graph TD
     subgraph Sensory Array
         CSI(IMX219 Camera) -- Ribbon --> NANO
         LID(RPLidar A1) -- USB Serial --> NANO
-        IMU(BNO085 IMU) -- I2C --> NANO
-        MIC(USB Microphone) -- ALSA Drivers --> NANO
+        OLED(SSD1306 OLED) -- I2C --> NANO
+        MIC(USB Microphone) -- USB --> NANO
     end
 
-    subgraph Actuation & Local Control
-        NANO -- I2C Bus --> RP[Raspberry Pi RP2040 Driver]
-        ENC(Wheel Encoders) -- GPIO Interrupts --> RP
+    subgraph Actuation & Embedded Sensing
+        NANO -- USB Serial --> RP[Raspberry Pi RP2040 Driver]
+        IMU(MPU9250 IMU) -- I2C --> RP
+        INA(INA219 Power) -- I2C --> RP
+        ENC(Wheel Encoders) -- GPIO --> RP
         RP -- PWM --> MOTORS[Rear DC Motors]
         RP -- PWM --> SERVO[Front Steering Servo]
     end
