@@ -7,25 +7,53 @@ This is a specialized training suite designed for high-precision traffic sign de
 - **Decoupled Configuration**: All training parameters (learning rate, mosaic, batch size) are controlled via `configs/hyperparameters.yaml`—**never touch the code**.
 - **Quantization Ready**: The pipeline is pre-configured to export models optimized for the Jetson Nano's TensorRT engines.
 
-## 🛠️ Usage
+## 🛠️ Setup & Installation
 
-### 1. Requirements
-Ensure you are in a Python 3.10+ environment with CUDA available.
+Follow these steps to set up an isolated training environment on your PC (Windows or Linux).
+
+### 1. Create Virtual Environment
 ```bash
-pip install -r yolo_toolkit/requirements.txt
+# Navigate to the toolkit directory
+cd yolo_toolkit
+
+# Create the venv
+python -m venv venv
 ```
 
-### 2. Training
-Adjust your settings in `yolo_toolkit/configs/hyperparameters.yaml` and then run:
+### 2. Activate Environment
+**Windows:**
 ```bash
-python yolo_toolkit/core/train_yolo.py --data dataset/data.yaml
+.\venv\Scripts\activate
 ```
-Output models will appear in `yolo_toolkit/outputs/jetracer_hardened/`.
+**Linux / macOS:**
+```bash
+source venv/bin/activate
+```
 
-### 3. Export for Jetson
+### 3. Install Expert Dependencies
+```bash
+# Upgrade pip first
+python -m pip install --upgrade pip
+
+# Install requirements
+pip install -r requirements.txt
+```
+
+---
+
+## 🚀 Execution Guide
+Adjust your settings in `configs/hyperparameters.yaml` and then run:
+
+### 1. Training
+```bash
+python main.py train
+```
+Output models will appear in `outputs/jetracer_hardened/`.
+
+### 2. Export for Jetson
 Convert your best model to a high-speed FP16 `.engine` file:
 ```bash
-python yolo_toolkit/core/export_yolo.py --weights yolo_toolkit/outputs/jetracer_hardened/weights/best.pt --half
+python main.py export --weights outputs/jetracer_hardened/weights/best.pt
 ```
 
 ---
