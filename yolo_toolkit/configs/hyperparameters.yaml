@@ -1,0 +1,33 @@
+# JetRacer Expert YOLO Training Config
+# Specialized for Traffic Sign Recognition (GTSRB-style)
+
+# --- Training Scope ---
+model: yolo11n.pt       # Base model (choices: yolo11n, yolo11s, yolo8n)
+epochs: 100             # Extended epochs for high-precision convergence
+imgsz: 640               # Standard 640x640 resolution
+batch: 16                # Adjust based on PC GPU VRAM
+patience: 15            # Early stopping if no improvement for 15 epochs
+
+# --- Hardware Optimization ---
+device: 0               # Use first CUDA GPU
+half: True              # Use FP16 training to save VRAM and speed up
+amp: True               # Automatic Mixed Precision
+
+# --- Augmentation Strategy (Expert Tweaks) ---
+# CRITICAL: We disable flip-left-right because the dataset contains directional signs 
+# (e.g. Left Turn vs Right Turn). Flipping them creates incorrect ground truth!
+fliplr: 0.0             # SET TO 0.0 (Disabled for directional consistency)
+flipud: 0.0             # Disabled (We aren't driving on the ceiling)
+
+# Enhance small object detection
+mosaic: 1.0             # High value to force the model to see signs in different quadrants
+mixup: 0.1              # Light mixup to prevent overfitting on background
+copy_paste: 0.1         # Copy signs into different backgrounds
+scale: 0.5              # Significant scaling range to handle distance variations
+
+# --- Solver & Regularization ---
+lr0: 0.01               # Initial learning rate
+lrf: 0.01               # Final learning rate fraction
+weight_decay: 0.0005    # L2 regularization
+warmup_epochs: 3.0      # Number of warmup epochs
+val: True               # Validate during training

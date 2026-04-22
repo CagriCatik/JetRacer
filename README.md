@@ -124,30 +124,29 @@ colcon test-result --all
 
 ## Machine Learning (YOLO Training)
 
-This repository includes a professional pipeline for training custom traffic sign models on your PC and deploying them to the Jetson Nano.
+This repository includes an industrial-grade **YOLO Training Toolkit** for high-precision traffic sign detection.
 
 ### 1. Training (on PC with GPU)
-The dataset is pre-formatted for YOLOv11. To start training:
+Configure your parameters in `yolo_toolkit/configs/hyperparameters.yaml` (expert defaults provided).
 
 ```bash
-# Install ML dependencies (Run this first)
-pip install -r tools/ml/ml_requirements.txt
+# Install ML dependencies
+pip install -r yolo_toolkit/requirements.txt
 
-# From the root directory
-python tools/ml/train_yolo.py --epochs 50 --batch 16
+# Start expert training
+python yolo_toolkit/core/train_yolo.py --data dataset/data.yaml
 ```
-Training results will be saved to `models/training/jetracer_signs/weights/best.pt`.
+Training results will be saved to `yolo_toolkit/outputs/`.
 
 ### 2. Exporting for Jetson (TensorRT)
-To achieve high FPS on the Jetson Nano, you must export the model to TensorRT format:
+To achieve high FPS on the Jetson Nano, export the model to a Half-Precision TensorRT engine:
 
 ```bash
-# On the Jetson Nano (to ensure hardware compatibility)
-python tools/ml/export_yolo.py --weights best.pt --format engine --half
+# On the Jetson Nano
+python yolo_toolkit/core/export_yolo.py --weights best.pt --format engine --half
 ```
-The resulting `.engine` file should be placed in `src/jetracer_perception/models/` and updated in `yolo.yaml`.
 
----
+For more details, see the [YOLO Toolkit Manual](yolo_toolkit/README.md).
 
 ## Documentation Index
 - [System Architecture Audit](docs/01_System_Overview.md)
