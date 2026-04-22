@@ -1,3 +1,4 @@
+path: C:\Users\mccat\Desktop\JetRacer\dataset # absolute path for Windows stability
 train: train/images
 val: valid/images
 test: test/images
