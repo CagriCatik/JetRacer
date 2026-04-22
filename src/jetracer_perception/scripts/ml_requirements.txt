@@ -1,0 +1,26 @@
+# JetRacer ML Pipeline Requirements
+# Optimized for Windows/Linux PC (Training) and Jetson Nano (Export/Quantization)
+
+# --- Core ML Framework ---
+# Note: For CUDA support on Windows/Linux, install torch separately first:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+ultralytics>=8.3.0
+
+# --- Export & ONNX Suite ---
+onnx>=1.16.0
+onnxsim>=0.4.36
+onnxruntime-gpu>=1.18.0
+
+# --- Quantization & Performance ---
+# tensorrt (Use 'pip install nvidia-pyindex' and then 'pip install nvidia-tensorrt' if needed on PC)
+# On Jetson Nano, TensorRT is pre-installed via JetPack (python3-libnvinfer)
+pycuda>=2024.1
+numpy<2.0.0 # Maintain compatibility with older TensorRT/CUDA bindings
+
+# --- Utilities ---
+opencv-python>=4.10.0
+cvbridge3>=1.0.0
+pandas>=2.2.0
+matplotlib>=3.9.0
+tqdm>=4.66.0
+PyYAML>=6.0.1

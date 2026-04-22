@@ -130,6 +130,9 @@ This repository includes a professional pipeline for training custom traffic sig
 The dataset is pre-formatted for YOLOv11. To start training:
 
 ```bash
+# Install ML dependencies (Run this first)
+pip install -r src/jetracer_perception/scripts/ml_requirements.txt
+
 # From the root directory
 python src/jetracer_perception/scripts/train_yolo.py --epochs 50 --batch 16
 ```
