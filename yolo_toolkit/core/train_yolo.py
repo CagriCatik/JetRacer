@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-JetRacer Expert YOLO Training Engine
-Decoupled architecture: Logic in Core, Tuning in Configs.
+JetRacer Expert YOLO Training Engine (Rich-Enabled)
 """
 
 import os
@@ -9,6 +8,11 @@ import yaml
 import argparse
 from ultralytics import YOLO
 from pathlib import Path
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+console = Console()
 
 def load_config(path):
     with open(path, 'r') as f:
@@ -24,13 +28,23 @@ def main():
     
     # 1. Load Expert Config
     if not os.path.exists(args.config):
-        print(f"Error: Config file {args.config} not found.")
+        console.print(f"[bold red]Error: Config file {args.config} not found.[/bold red]")
         return
         
     cfg = load_config(args.config)
-    print(f"\n[EXPERT INFO] Initializing training with {cfg['model']} for {cfg['epochs']} epochs.")
+    
+    # Display config Summary
+    table = Table(title="Training Hyperparameters", title_style="bold cyan")
+    table.add_column("Parameter", style="magenta")
+    table.add_column("Value", style="green")
+    for k, v in cfg.items():
+        if isinstance(v, (int, float, str, bool)):
+            table.add_row(k, str(v))
+    
+    console.print(table)
+
     if cfg.get('fliplr', 1.0) == 0.0:
-        print("[SAFETY NOTICE] Horizontal Flip is DISABLED to protect directional sign labels.")
+        console.print(Panel("[bold yellow]SAFETY NOTICE[/bold yellow]: Horizontal Flip is [bold red]DISABLED[/bold red] to protect directional sign labels.", border_style="yellow"))
 
     # 2. Setup Directories
     Path(args.output).mkdir(parents=True, exist_ok=True)
@@ -38,18 +52,15 @@ def main():
     # 3. Initialize Model
     model = YOLO(cfg['model'])
 
-    # 4. Run Training using the full config dictionary
-    # We unpack the dictionary into the train function
+    # 4. Run Training
     results = model.train(
         data=args.data,
         project=args.output,
         name="jetracer_hardened",
-        **cfg # Expert injection of all YAML params
+        **cfg 
     )
 
-    print(f"\n--- SUCCESS ---")
-    print(f"Best Weights: {args.output}/jetracer_hardened/weights/best.pt")
-    print(f"To export for Jetson, use: python yolo_toolkit/core/export_yolo.py --weights {args.output}/jetracer_hardened/weights/best.pt --half")
+    console.print(Panel(f"[bold green]SUCCESS[/bold green]\nBest Weights: [cyan]{args.output}/jetracer_hardened/weights/best.pt[/cyan]", title="Training Complete", border_style="green"))
 
 if __name__ == "__main__":
     main()

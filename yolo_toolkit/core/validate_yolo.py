@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """
-JetRacer Expert YOLO Validation Engine
-Supports .pt and .engine (TensorRT) models.
+JetRacer Expert YOLO Validation Engine (Rich-Enabled)
 """
 
 import argparse
 from ultralytics import YOLO
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+console = Console()
 
 def main():
     parser = argparse.ArgumentParser(description="JetRacer YOLO Validation Script")
@@ -17,7 +21,7 @@ def main():
     
     args = parser.parse_args()
 
-    print(f"--- Firing up Validation for: {args.weights} ---")
+    console.print(f"[bold blue]Processing weights:[/bold blue] [cyan]{args.weights}[/cyan]")
     
     # Load model
     model = YOLO(args.weights)
@@ -28,17 +32,21 @@ def main():
         imgsz=args.imgsz,
         batch=args.batch,
         split=args.split,
-        device=0 # Use GPU
+        device=0 
     )
 
-    print("\n" + "="*30)
-    print("      VALIDATION RESULTS      ")
-    print("="*30)
-    print(f"mAP50:    {metrics.box.map50:.4f}")
-    print(f"mAP50-95: {metrics.box.map:.4f}")
-    print(f"Inference: {metrics.speed['inference']:.2f}ms")
-    print(f"Preprocess: {metrics.speed['preprocess']:.2f}ms")
-    print("="*30)
+    # Result Table
+    table = Table(title=f"Validation Metrics ({args.split})", title_style="bold magenta")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Score / Time", style="green", justify="right")
+
+    table.add_row("mAP@50", f"{metrics.box.map50:.4f}")
+    table.add_row("mAP@50-95", f"{metrics.box.map:.4f}")
+    table.add_row("Inference Latency", f"{metrics.speed['inference']:.2f} ms")
+    table.add_row("Preprocess Latency", f"{metrics.speed['preprocess']:.2f} ms")
+    table.add_row("Postprocess Latency", f"{metrics.speed['postprocess']:.2f} ms")
+
+    console.print(table)
 
 if __name__ == "__main__":
     main()

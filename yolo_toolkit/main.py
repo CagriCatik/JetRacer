@@ -2,6 +2,12 @@
 import argparse
 import sys
 import os
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+
+# Aesthetic Console
+console = Console()
 
 # Add core to path so we can import modules
 sys.path.append(os.path.join(os.path.dirname(__file__), 'core'))
@@ -10,7 +16,13 @@ from train_yolo import main as train_main
 from export_yolo import main as export_main
 from validate_yolo import main as validate_main
 
+def show_banner():
+    banner = Text("🚀 JETRACER YOLO TOOLKIT", style="bold magenta", justify="center")
+    console.print(Panel(banner, border_style="cyan"))
+
 def main():
+    show_banner()
+    
     parser = argparse.ArgumentParser(description="JetRacer YOLO Toolkit - Unified Interface")
     subparsers = parser.add_subparsers(dest="mode", help="Execution mode")
 
@@ -32,19 +44,19 @@ def main():
     args = parser.parse_args()
 
     if args.mode == "train":
-        # Pass synthetic arguments to the core train script
+        console.print("[bold green]Starting Training Mission...[/bold green]")
         sys.argv = [sys.argv[0], "--config", args.config, "--data", args.data]
         train_main()
     
     elif args.mode == "export":
-        # Pass synthetic arguments to the core export script
+        console.print(f"[bold yellow]Initiating Export for {args.weights}...[/bold yellow]")
         sys.argv = [sys.argv[0], "--weights", args.weights]
         if args.half:
             sys.argv.append("--half")
         export_main()
 
     elif args.mode == "validate":
-        # Pass synthetic arguments to the core validate script
+        console.print(f"[bold blue]Launching Validation on '{args.split}' split...[/bold blue]")
         sys.argv = [sys.argv[0], "--weights", args.weights, "--split", args.split]
         validate_main()
     
