@@ -59,11 +59,19 @@ python main.py export --weights outputs/jetracer_hardened/weights/best.pt
 ### 3. Validation
 Verify the accuracy (mAP) and speed of your model (works for both `.pt` and `.engine`):
 ```bash
-# Validate on validation set
 python main.py validate --weights outputs/jetracer_hardened/weights/best.pt
+```
 
-# Validate on final test set
-python main.py validate --weights outputs/jetracer_hardened/weights/best.pt --split test
+### 4. Dataset Intelligence
+Analyze your class distribution and label health before training:
+```bash
+python main.py analyze
+```
+
+### 5. Hardware Benchmarking
+Calculate real-world FPS and latency metrics on your target system:
+```bash
+python main.py benchmark --weights outputs/jetracer_hardened/weights/best.pt
 ```
 
 ---
