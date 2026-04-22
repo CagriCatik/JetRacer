@@ -131,10 +131,10 @@ The dataset is pre-formatted for YOLOv11. To start training:
 
 ```bash
 # Install ML dependencies (Run this first)
-pip install -r src/jetracer_perception/scripts/ml_requirements.txt
+pip install -r tools/ml/ml_requirements.txt
 
 # From the root directory
-python src/jetracer_perception/scripts/train_yolo.py --epochs 50 --batch 16
+python tools/ml/train_yolo.py --epochs 50 --batch 16
 ```
 Training results will be saved to `models/training/jetracer_signs/weights/best.pt`.
 
@@ -143,7 +143,7 @@ To achieve high FPS on the Jetson Nano, you must export the model to TensorRT fo
 
 ```bash
 # On the Jetson Nano (to ensure hardware compatibility)
-python src/jetracer_perception/scripts/export_yolo.py --weights best.pt --format engine --half
+python tools/ml/export_yolo.py --weights best.pt --format engine --half
 ```
 The resulting `.engine` file should be placed in `src/jetracer_perception/models/` and updated in `yolo.yaml`.
 
