@@ -31,5 +31,20 @@ def generate_launch_description():
             executable='controller_relay.py',
             name='controller_relay',
             output='screen'
+        ),
+
+        # Manual Teleoperation Node
+        Node(
+            package='jetracer_teleop',
+            executable='teleop_joy.py',
+            name='teleop_joy',
+            parameters=[{
+               'x_speed': 0.5,
+               'w_speed': 1.0,
+               'linear_axis': 4,
+               'angular_axis': 0,
+               'deadman_button': 6,
+            }],
+            remappings=[('cmd_vel', 'cmd_vel_teleop')]
         )
     ])

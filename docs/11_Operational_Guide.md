@@ -20,14 +20,18 @@ The standard Waveshare Gamepad matches the following layout for mission manageme
 | **Launch Mapping** | `SELECT` + `X` | Starts SLAM and Navigation |
 | **Emergency Halt** | `MODE` (Center) | Kills all active missions and stops all motors |
 
-## Teleoperation (Manual Control)
+## Teleoperation (Manual Override)
 
-To drive the robot manually, hold the **Deadman Switch (L2)**:
-- **Left Stick Vertical**: Forward / Backward Speed
-- **Left Stick Horizontal**: Steering Angle
+Manual driving is **always active** as a background safety layer. You can override any autonomous mission at any time by simply using the gamepad.
+
+- **Trigger**: Hold the **Deadman Switch (L2)**. 
+- **Priority**: High. Pressing L2 will immediately "mute" the Autonomy/SLAM AI and give you direct control of the wheels.
+- **Controls (RC Style)**:
+    - **Right Stick Vertical**: Forward / Backward Speed
+    - **Left Stick Horizontal**: Steering Angle
 
 > [!WARNING]
-> **Safety Gating**: If you release the L2 button while in manual mode, the robot will immediately stop.
+> **Safety Gating**: If you release the L2 button while in manual mode, the robot will immediately stop, even if an autonomous mission is running.
 
 ## Diagnostic Feedback (OLED)
 

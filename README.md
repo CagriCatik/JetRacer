@@ -14,6 +14,8 @@
 [![Foxglove](https://img.shields.io/badge/Telemetry-Foxglove_Bridge-FF6B35.svg)](https://foxglove.dev/)
 [![System](https://img.shields.io/badge/Architecture-Hardened-success.svg)](#production-hardening-roadmap)
 [![Diagnostics](https://img.shields.io/badge/Telemetry-Diagnostic_Ready-informational.svg)](#-active-diagnostics)
+[![Sentinel](https://img.shields.io/badge/Interface-Gamepad_Messenger-blueviolet.svg)](#one-button-mission-control)
+[![OLED](https://img.shields.io/badge/Display-OLED_Dashboard-blue.svg)](#onboard-telemetry)
 [![Platform](https://img.shields.io/badge/Hardware-Jetson_Nano-76B900.svg?logo=nvidia&logoColor=white)](https://developer.nvidia.com/embedded-computing)
 
 *Professional grade ROS 2 Humble transformation for the Waveshare JetRacer platform. Designed for stability, deterministic control, and comprehensive observability.*
@@ -46,20 +48,24 @@ This repository has undergone a comprehensive architectural audit and hardening 
 
 ---
 
-## Deployment Guide
-
-### 1. Containerized Setup
-Prepare your Jetson Nano using the [Ubuntu 20.04 Workaround](docs/00_ROS2-Jetson-Nano.md).
-
 ```bash
-# Build and enter the hardened workspace
-docker compose up -d --build
-docker exec -it jetracer_workspace bash
-
-# Build the C++ components
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
-source install/setup.bash
+# Register the one-button autostart service
+bash install_service.sh
 ```
+
+### 2. Manual Driving (Always-on)
+The robot boots into **Sentinel Mode**. You can drive manually immediately by holding **L2** (Deadman Switch).
+*   **Steering**: Left Stick
+*   **Throttle**: Right Stick (Vertical)
+
+### 3. One-Button Mission Control
+Trigger full autonomous launches directly from the gamepad:
+
+| Mission | Combo | Description |
+| :--- | :--- | :--- |
+| **Autonomy** | `SELECT` + `START` | Full Lane/YOLO perception stack. |
+| **Mapping** | `SELECT` + `X` | SLAM + Nav2 Grid Mapping. |
+| **E-Stop** | `MODE` | Immediate mission teardown and stop. |
 
 ### 2. Launching Autonomy
 Launch the core hardware and safety stack:
@@ -85,6 +91,8 @@ ros2 topic echo /diagnostics
 *   **Serial Status:** Port connectivity and throughput.
 *   **Heartbeat Frequency:** Command freshness and safety timing.
 *   **Sensor Streaming:** IMU and Wheel Odom update rates.
+*   **Onboard Telemetry:** Physical OLED display showing IP, Battery %, and Thermal Pressure.
+*   **Thermal Health:** Real-time throttling monitor for each Nano CPU/GPU core.
 *   **Wheel Slip:** Real-time divergence check between IMU and Encoders.
 
 ---
