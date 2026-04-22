@@ -23,7 +23,6 @@ def main():
     # Normalize the data path relative to the toolkit root
     data_path = Path(args.data).absolute()
     if not data_path.exists():
-        # Try relative to CWD
         data_path = (Path.cwd() / args.data).absolute()
 
     if not data_path.exists():
@@ -34,16 +33,14 @@ def main():
         data_cfg = yaml.safe_load(f)
 
     classes = data_cfg['names']
-    
-    # Correct path resolution relative to where data.yaml is located
-    # In YOLO, images and labels are siblings
     data_dir = data_path.parent
-    train_relative = data_cfg['train']
     
-    # Resolve the absolute path of the training images
+    # Resolve paths relative to data.yaml
+    train_relative = data_cfg['train']
     train_img_path = (data_dir / train_relative).resolve()
     
-    # Path to labels (replace 'images' with 'labels' in the folder name)
+    # labels are in a 'labels' folder parallel to 'images'
+    # e.g. train/images -> train/labels
     label_path = Path(str(train_img_path).replace('images', 'labels'))
     
     console.print(f"[bold blue]Analyzing training split at:[/bold blue] [cyan]{label_path}[/cyan]")
@@ -81,12 +78,5 @@ def main():
     console.print(table)
     console.print(f"\n[bold]Total Annotations:[/bold] [cyan]{total_boxes}[/cyan]")
     
-    # Expert Advice
-    if total_boxes > 0:
-        if any(count < (total_boxes / len(classes) * 0.2) for count in class_counts.values()):
-            console.print("\n[bold yellow]ADVICE[/bold yellow]: Significant class imbalance detected. Consider adding more images for rare classes or using oversampling.")
-    else:
-        console.print("\n[bold red]WARNING[/bold red]: No annotations found. Check your dataset folder structure.")
-
 if __name__ == "__main__":
     main()

@@ -18,7 +18,7 @@ Follow these steps to set up your high-performance training environment. **Pytho
 cd yolo_toolkit
 
 # Create the venv (Use your Python 3.11 path)
-& "C:\Users\mccat\AppData\Local\Programs\Python\Python311\python.exe" -m venv venv
+python -m venv venv
 ```
 
 ### 2. Activate & Install

@@ -1,6 +1,6 @@
-train: ../dataset/train/images
-val: ../dataset/valid/images
-test: ../dataset/test/images
+train: train/images
+val: valid/images
+test: test/images
 
 nc: 9
 names: ['30_ZONE_BEGIN', '30_ZONE_END', 'ATTENTION', 'CHILD', 'GIVE_WAY', 'PERSON', 'PRIORITY_ROAD', 'RIGHT_TURN', 'STOP']
