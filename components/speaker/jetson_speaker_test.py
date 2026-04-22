@@ -9,7 +9,7 @@ def test_speaker():
     This bypasses any Python-level dependencies and tests directly at the silicon level.
     """
     print("====================================")
-    print("🔈 Jetson Standalone Speaker Diagnostic")
+    print(" Jetson Standalone Speaker Diagnostic")
     print("====================================")
     
     print("\nAttempting to lock the /dev/snd ALSA subsystem...")
@@ -26,9 +26,9 @@ def test_speaker():
         exit_code = os.system("speaker-test -t wav -c 2 -l 1")
         
         if exit_code == 0:
-            print("\n✅ ALSA Diagnostic passed cleanly. Hardware speaker is operational!")
+            print("\n ALSA Diagnostic passed cleanly. Hardware speaker is operational!")
         else:
-            print(f"\n❌ ALSA Diagnostic failed with exit code {exit_code}.")
+            print(f"\n ALSA Diagnostic failed with exit code {exit_code}.")
             print("Ensure the USB DAC or I2S amplifier is physically plugged in.")
             
     except KeyboardInterrupt:

@@ -1,0 +1,13 @@
+train: ../dataset/train/images
+val: ../dataset/valid/images
+test: ../dataset/test/images
+
+nc: 9
+names: ['30_ZONE_BEGIN', '30_ZONE_END', 'ATTENTION', 'CHILD', 'GIVE_WAY', 'PERSON', 'PRIORITY_ROAD', 'RIGHT_TURN', 'STOP']
+
+roboflow:
+  workspace: jetson-z26yf
+  project: final-jetracer-traffic-signs
+  version: 9
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/jetson-z26yf/final-jetracer-traffic-signs/dataset/9

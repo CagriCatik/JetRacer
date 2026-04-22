@@ -28,10 +28,10 @@
 This repository has undergone a comprehensive architectural audit and hardening process to transition from a prototype to a deployment-ready robotics platform.
 
 ### Key Enhancements
-*   **Arbitration Integrity:** All navigation and behavior commands are routed through `twist_mux` with strict priority-based overrides (Emergency > Manual > Behavior > Lane > Nav2).
-*   **Environmental Portability:** Removed all absolute path dependencies. ML models (YOLO, Vosk) and configurations utilize `ament_index` for dynamic, system-agnostic resolution.
-*   **Native Performance:** Critical control bridges (Ackermann conversion) have been ported from Python to **Native C++** to reduce IPC latency and jitter on the Jetson Nano.
-*   **Fail-Safe Design:** Implemented a hardware "Heart-Stop" in the serial bridge and tightened safety watchdogs (0.1s) for immediate teleop disconnection handling.
+- **Arbitration Integrity:** All navigation and behavior commands are routed through `twist_mux` with strict priority-based overrides (Emergency > Manual > Behavior > Lane > Nav2).
+- **Environmental Portability:** Removed all absolute path dependencies. ML models (YOLO, Vosk) and configurations utilize `ament_index` for dynamic, system-agnostic resolution.
+- **Native Performance:** Critical control bridges (Ackermann conversion) have been ported from Python to **Native C++** to reduce IPC latency and jitter on the Jetson Nano.
+- **Fail-Safe Design:** Implemented a hardware "Heart-Stop" in the serial bridge and tightened safety watchdogs (0.1s) for immediate teleop disconnection handling.
 
 ---
 
@@ -70,8 +70,8 @@ bash install_service.sh
 
 ### 1. Manual Driving (Always-on)
 The robot boots into **Sentinel Mode**. You can drive manually immediately by holding **L2** (Deadman Switch).
-*   **Steering**: Left Stick
-*   **Throttle**: Right Stick (Vertical)
+- **Steering**: Left Stick
+- **Throttle**: Right Stick (Vertical)
 
 ### 2. One-Button Mission Control
 Trigger full autonomous launches directly from the gamepad:
@@ -103,12 +103,12 @@ ros2 topic echo /diagnostics
 ```
 
 **Monitored Metrics:**
-*   **Serial Status:** Port connectivity and throughput.
-*   **Heartbeat Frequency:** Command freshness and safety timing.
-*   **Sensor Streaming:** IMU and Wheel Odom update rates.
-*   **Onboard Telemetry:** Physical OLED display showing IP, Battery %, and Thermal Pressure.
-*   **Thermal Health:** Real-time throttling monitor for each Nano CPU/GPU core.
-*   **Wheel Slip:** Real-time divergence check between IMU and Encoders.
+- **Serial Status:** Port connectivity and throughput.
+- **Heartbeat Frequency:** Command freshness and safety timing.
+- **Sensor Streaming:** IMU and Wheel Odom update rates.
+- **Onboard Telemetry:** Physical OLED display showing IP, Battery %, and Thermal Pressure.
+- **Thermal Health:** Real-time throttling monitor for each Nano CPU/GPU core.
+- **Wheel Slip:** Real-time divergence check between IMU and Encoders.
 
 ---
 
@@ -119,6 +119,30 @@ Verify system health before high-speed deployments using the integrated smoke te
 colcon test --packages-select jetracer_bringup
 colcon test-result --all
 ```
+
+---
+
+## Machine Learning (YOLO Training)
+
+This repository includes a professional pipeline for training custom traffic sign models on your PC and deploying them to the Jetson Nano.
+
+### 1. Training (on PC with GPU)
+The dataset is pre-formatted for YOLOv11. To start training:
+
+```bash
+# From the root directory
+python src/jetracer_perception/scripts/train_yolo.py --epochs 50 --batch 16
+```
+Training results will be saved to `models/training/jetracer_signs/weights/best.pt`.
+
+### 2. Exporting for Jetson (TensorRT)
+To achieve high FPS on the Jetson Nano, you must export the model to TensorRT format:
+
+```bash
+# On the Jetson Nano (to ensure hardware compatibility)
+python src/jetracer_perception/scripts/export_yolo.py --weights best.pt --format engine --half
+```
+The resulting `.engine` file should be placed in `src/jetracer_perception/models/` and updated in `yolo.yaml`.
 
 ---
 
