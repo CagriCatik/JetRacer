@@ -8,6 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'core'))
 
 from train_yolo import main as train_main
 from export_yolo import main as export_main
+from validate_yolo import main as validate_main
 
 def main():
     parser = argparse.ArgumentParser(description="JetRacer YOLO Toolkit - Unified Interface")
@@ -23,6 +24,11 @@ def main():
     export_parser.add_argument("--weights", type=str, required=True, help="Path to .pt weights")
     export_parser.add_argument("--half", action="store_true", default=True, help="Use FP16 (Recommended)")
 
+    # Validate Subcommand
+    validate_parser = subparsers.add_parser("validate", help="Validate model on val/test split")
+    validate_parser.add_argument("--weights", type=str, required=True, help="Path to best.pt or best.engine")
+    validate_parser.add_argument("--split", type=str, default="val", choices=["val", "test"], help="Dataset split")
+
     args = parser.parse_args()
 
     if args.mode == "train":
@@ -36,6 +42,11 @@ def main():
         if args.half:
             sys.argv.append("--half")
         export_main()
+
+    elif args.mode == "validate":
+        # Pass synthetic arguments to the core validate script
+        sys.argv = [sys.argv[0], "--weights", args.weights, "--split", args.split]
+        validate_main()
     
     else:
         parser.print_help()

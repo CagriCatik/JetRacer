@@ -56,6 +56,16 @@ Convert your best model to a high-speed FP16 `.engine` file:
 python main.py export --weights outputs/jetracer_hardened/weights/best.pt
 ```
 
+### 3. Validation
+Verify the accuracy (mAP) and speed of your model (works for both `.pt` and `.engine`):
+```bash
+# Validate on validation set
+python main.py validate --weights outputs/jetracer_hardened/weights/best.pt
+
+# Validate on final test set
+python main.py validate --weights outputs/jetracer_hardened/weights/best.pt --split test
+```
+
 ---
 > [!IMPORTANT]
 > **Why disable `fliplr`?**
