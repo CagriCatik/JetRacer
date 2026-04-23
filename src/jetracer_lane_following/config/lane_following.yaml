@@ -11,7 +11,10 @@ lane_following:
     max_steering_rad: 0.6
     lateral_controller_type: "stanley"
     gain_constant: 1.8
-    damping_constant: 1.0
+    damping_constant: 0.25
+    steering_smoothing: 0.25
+    controller_lookahead_m: 0.35
+    controller_heading_points: 4
     mpc_horizon: 8
     mpc_dt: 0.1
     mpc_wheelbase: 0.255
@@ -23,6 +26,7 @@ lane_following:
     mpc_cte_scale_px: 48.0
     mpc_speed_scale_ms: 0.35
     mpc_min_speed_ms: 0.05
+    max_steering_rate_radps: 3.0
     cut_size: 68
     spline_smoothness: 10.0
     gradient_threshold: 14.0
@@ -30,7 +34,20 @@ lane_following:
     num_waypoints: 6
     way_type: "center"
     smoothing_beta: 30.0
+    fallback_lane_width_px: 220.0
+    lane_width_ema_alpha: 0.25
+    lane_width_min_px: 160.0
+    lane_width_max_px: 280.0
+    bev_vehicle_center_x_px: 160.0
+    bev_vehicle_origin_y_px: 239.0
+    bev_lateral_m_per_px: 0.0022
+    bev_forward_m_per_px: 0.0030
+    speed_curvature_gain: 2.5
+    speed_confidence_floor: 0.35
+    path_frame_id: "base_link"
     publish_debug_image: true
     camera_topic: "csi_cam_0/image_raw/compressed"
     camera_info_topic: "csi_cam_0/camera_info"
     use_camera_calibration: true
+    publish_ackermann_drive: true
+    publish_legacy_twist: true

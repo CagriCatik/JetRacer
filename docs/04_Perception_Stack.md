@@ -7,6 +7,7 @@ The **`jetracer_perception`** package translates raw analog light hitting the IM
 We utilize two completely isolated perception layers, achieving different tasks simultaneously:
 
 ### 1. The High-Speed Reactive Tracker
+
 **File:** `lane_following_node.py`
 
 When the car needs to follow a path at high speeds, computational latency must be under `10ms`. The lane following pipeline utilizes a robust, deterministic Computer Vision foundation optimized for physical hardware.
@@ -21,7 +22,8 @@ graph TD
     BEV -->|4. Masking| MASK[Luma/HSV Binary Mask]
     MASK -->|5. Histogram| BASE[Line Base Anchors]
     BASE -->|6. Sliding Windows| POLY[Polynomial Fit]
-    POLY -->|7. Inverse Warp| WAYP[Trajectory Vector]
+    POLY -->|7. Vehicle Frame| WAYP[Metric Centerline]
+    POLY -->|8. Inverse Warp| CAMWP[Camera Overlay]
     WAYP --> SEL{Controller}
     SEL -->|autonomy| AUT[Stanley / MPC]
     SEL -->|basic| PD[PD Controller]
@@ -32,7 +34,7 @@ graph TD
 - **Resolution Shift:** Operates at **320x240**, providing 3.3x more pixel density than legacy ports.
 - **Bird's-Eye View (BEV):** Uses a `cv2.warpPerspective` matrix to transform the road into a top-down view for parallel line math.
 - **Robust Tracking:** The **Sliding Window** approach enables the car to "follow" lines through gaps or shadows by maintaining momentum from previous frames.
-- **Deterministic Control:** The solved trajectory is mathematically projected back into camera space, ensuring the controllers receive smooth, lag-free steering vectors.
+- **Deterministic Control:** Controllers now consume the centerline in BEV-derived vehicle coordinates, while the inverse projection is kept only for debug overlays.
 
 ### Camera Calibration Workflow
 
@@ -52,6 +54,7 @@ ros2 launch jetracer_bringup camera_calibration.launch.py \
 See [12. Camera Calibration](12_Camera_Calibration.md) for the full procedure.
 
 ### 2. The Deep-Learning Semantic Tracker
+
 **File:** `yolo_detection.py`
 
 While the Lane Follower acts as the "Spinal Cord" (pure high-speed reflexes), the YOLO module acts as the "Cerebral Cortex" (complex understanding).

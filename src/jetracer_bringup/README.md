@@ -27,13 +27,25 @@ ros2 launch jetracer_bringup jetracer.launch.py
 `jetracer_bringup/lane_following.launch.py` exposes:
 
 - `lateral_controller_type` (`stanley` or `mpc`)
+- `steering_smoothing`
+- `controller_lookahead_m`
+- `publish_ackermann_drive`
+- `publish_legacy_twist`
 
 Example:
 
 ```bash
 ros2 launch jetracer_bringup lane_following.launch.py \
-  lateral_controller_type:=mpc
+  lateral_controller_type:=mpc \
+  controller_lookahead_m:=0.40
 ```
+
+The lane follower now publishes:
+
+- `drive_lane` as the primary `ackermann_msgs/AckermannDriveStamped` command
+- `cmd_vel_lane` as a legacy steering-angle `Twist` for the existing `twist_mux` path
+- `lane_following/waypoints` in vehicle-frame meters
+- `lane_following/waypoints_camera` for camera-space overlays
 
 ## Camera calibration
 

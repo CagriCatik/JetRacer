@@ -168,7 +168,7 @@ The stack uses two command semantics:
 flowchart LR
   T[teleop_key / teleop_joy] -->|cmd_vel_teleop P10| M[twist_mux]
   B[semantic_behavior + collision_assurance] -->|cmd_vel_behavior P8| M
-  L[lane_following] -->|cmd_vel_lane P5| M
+  L[lane_following] -->|cmd_vel_lane legacy P5| M
   V[color/line/object/face] -->|cmd_vel_vision P4| M
   N[Nav2 controller_server] -->|cmd_vel_nav| S[cmd_vel_to_steering]
   S -->|cmd_vel_nav_steer P3| M
@@ -182,6 +182,10 @@ flowchart LR
 - `cmd_vel_lane`: priority 5, timeout 0.3
 - `cmd_vel_vision`: priority 4, timeout 0.5
 - `cmd_vel_nav_steer`: priority 3, timeout 0.5
+
+The lane follower also publishes `drive_lane` (`AckermannDriveStamped`) as the
+clean semantic control interface. The existing `twist_mux` chain still consumes
+`cmd_vel_lane` for compatibility with the downstream serial bridge.
 
 ### 5.3 Safety characteristics in command plane
 
@@ -343,9 +347,10 @@ flowchart TD
 4. **Perspective Warp:** transform to Bird's-Eye View (BEV)
 5. **Luminance Thresholding:** isolate white tape on black ground
 6. **Sliding Window Polynomial Fit:** fit 2nd-degree parabolas to detected pixels
-7. **Inverse Warp:** project solved trajectories back to camera space
-8. selectable lateral control (`stanley` or `mpc`) + PID longitudinal control
-9. publish `cmd_vel_lane` and waypoints/debug image
+7. keep the solved centerline in BEV and convert it to a pseudo-metric vehicle frame
+8. project the same centerline back to camera space only for debug overlays
+9. selectable lateral control (`stanley` or `mpc`) + PID longitudinal control
+10. publish `drive_lane`, legacy `cmd_vel_lane`, metric waypoints, and debug image
 
 Inputs:
 
@@ -355,8 +360,10 @@ Inputs:
 
 Outputs:
 
+- `drive_lane`
 - `cmd_vel_lane`
 - `lane_following/waypoints`
+- `lane_following/waypoints_camera`
 - `lane_following/debug_image/compressed`
 
 ```mermaid
@@ -369,34 +376,40 @@ flowchart LR
   WARP --> LUM[Luminance Threshold]
   LUM --> HIST[Histogram Sliding Window]
   HIST --> POLY[Parabolic Fit]
-  POLY --> UNWARP[Inverse Perspective Warp]
-  UNWARP --> WP[Waypoint Vector]
-  WP --> CURV[TargetSpeedFromCurvature]
-  WP --> ST[Lateral Controller Selector]
+  POLY --> BEV[Centerline in BEV]
+  BEV --> VF[Vehicle-frame waypoints]
+  BEV --> UNWARP[Inverse Perspective Warp]
+  UNWARP --> CAMWP[Camera-space waypoints]
+  VF --> CURV[TargetSpeedFromCurvature]
+  VF --> ST[Lateral Controller Selector]
   ODOM["/odom"] --> PID[PID Longitudinal]
   CURV --> PID
-  ST --> CMD[cmd_vel_lane]
-  PID --> CMD
-  WP --> DBG1[lane_following/waypoints]
-  POLY --> DBG2[lane_following/debug_image/compressed]
+  ST --> ACK[drive_lane]
+  PID --> ACK
+  ST --> TW[cmd_vel_lane legacy]
+  PID --> TW
+  VF --> DBG1[lane_following/waypoints]
+  CAMWP --> DBG2[lane_following/waypoints_camera]
+  CAMWP --> DBG3[lane_following/debug_image/compressed]
 ```
 
 ```mermaid
 flowchart TD
   CFG[lateral_controller_type param]
-  WP2[Predicted waypoints]
+  WP2[Vehicle-frame waypoints]
   ODO2["/odom speed"]
 
   CFG --> SEL{stanley or mpc}
   WP2 --> SEL
   ODO2 --> SEL
 
-  SEL -->|stanley| STAN[Stanley law\nk,damping]
+  SEL -->|stanley| STAN[Stanley law\nlookahead + smoothing]
   SEL -->|mpc| MPC[Linear MPC horizon solve\nQ/R tuning]
 
-  STAN --> OUT[normalized steering]
+  STAN --> OUT[steering angle in rad]
   MPC --> OUT
-  OUT --> AZ[angular.z = steer * max_steering_rad]
+  OUT --> ACK2[drive.steering_angle]
+  OUT --> TW2[legacy Twist angular.z = steering angle]
 ```
 
 ## 8.3 Classical vision behaviors
@@ -585,7 +598,8 @@ stateDiagram-v2
 | `/cmd_vel` | `geometry_msgs/Twist` | `twist_mux` | `jetracer_serial_node` | final actuator command |
 | `cmd_vel_teleop` | `Twist` | teleop nodes | `twist_mux` | highest priority |
 | `cmd_vel_behavior` | `Twist` | behavior nodes | `twist_mux` | emergency semantic/LiDAR stops |
-| `cmd_vel_lane` | `Twist` | lane follower | `twist_mux` | lane autonomy |
+| `drive_lane` | `AckermannDriveStamped` | lane follower | optional direct consumers | primary lane-control command |
+| `cmd_vel_lane` | `Twist` | lane follower | `twist_mux` | legacy steering-angle compatibility command |
 | `cmd_vel_vision` | `Twist` | classical vision trackers | `twist_mux` | perception-driven tracking |
 | `cmd_vel_nav` | `Twist` | Nav2 controller_server | `cmd_vel_to_steering` | pre-adaptation Nav2 command |
 | `cmd_vel_nav_steer` | `Twist` | `cmd_vel_to_steering` | `twist_mux` | adapted Nav2 command |
@@ -595,6 +609,8 @@ stateDiagram-v2
 | `/scan` | `sensor_msgs/LaserScan` | `rplidar_node` | Nav2, collision assurance | primary LiDAR feed |
 | `/filteredscan` | `LaserScan` | laser_filter | optional consumers | only when filter launch is used |
 | `csi_cam_0/image_raw/compressed` | `sensor_msgs/CompressedImage` | camera pipeline | perception/lane nodes | default camera stream |
+| `lane_following/waypoints` | `Float32MultiArray` | lane follower | debug/tuning tools | vehicle-frame waypoints (m) |
+| `lane_following/waypoints_camera` | `Float32MultiArray` | lane follower | debug/tuning tools | camera-space overlay points |
 | `perception/yolo_detections` | `vision_msgs/Detection2DArray` | YOLO node | semantic behavior | semantic signal |
 | `/goal_pose` | `geometry_msgs/PoseStamped` | voice commander (and UI tools) | Nav2 BT navigator | goal API topic |
 | `clicked_point` | `geometry_msgs/PointStamped` | RViz tool | multipoint_nav | mission waypoint input |

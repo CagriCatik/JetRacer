@@ -66,6 +66,11 @@ Use this portal as the canonical operations guide for setup, deployment, and run
     <span>Startup, Mission Control, and Gamepad procedures.</span>
   </a>
 
+  <a class="jr-card" href="12_Camera_Calibration/">
+    <strong>12. Camera Calibration Guide: </strong>
+    <span>Camera Calibration for **IMX219-160** wide-angle CSI camera.</span>
+  </a>
+
 </div>
 
 ## Mermaid Rendering Check

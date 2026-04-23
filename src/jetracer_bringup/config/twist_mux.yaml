@@ -9,10 +9,11 @@
 #
 # All sources have a timeout so the car stops if the topic goes silent.
 #
-# NOTE: All inputs are STEERING-ANGLE Twists.
-#       Conversion from yaw-rate rad/s to steering angle rad 
-#       is handled by individual nodes (lane_following) or 
-#       the bridge node (cmd_vel_to_steering).
+# NOTE: twist_mux still consumes STEERING-ANGLE Twists for compatibility with
+#       the downstream serial bridge. The lane follower now also publishes a
+#       primary AckermannDriveStamped command on `drive_lane`, but keeps the
+#       legacy Twist output on `cmd_vel_lane` so the existing mux/hardware path
+#       continues to work unchanged.
 
 twist_mux:
   ros__parameters:

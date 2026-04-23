@@ -9,10 +9,22 @@ for high-contrast "white lines on black track" physical robotics.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import cv2
 import numpy as np
 
-__all__ = ["LaneDetection"]
+__all__ = ["LaneDetection", "LaneDetectionResult"]
+
+
+@dataclass(slots=True)
+class LaneDetectionResult:
+    left_fit: np.ndarray | None
+    right_fit: np.ndarray | None
+    Minv: np.ndarray
+    left_detected: bool
+    right_detected: bool
+    lane_width_px: float | None
 
 
 class LaneDetection:
@@ -65,13 +77,13 @@ class LaneDetection:
         self.left_fit_old = None
         self.right_fit_old = None
 
-    def lane_detection(self, state_image_full: np.ndarray):
+    def lane_detection(self, state_image_full: np.ndarray) -> LaneDetectionResult:
         """
         Calculates polynomial boundaries.
         Args:
             state_image_full: (96, 96, 3) Image Frame.
         Returns:
-            left_fit, right_fit, Minv
+            LaneDetectionResult with current-fit validity and fallback-adjusted fits.
         """
         # 1. Warp to Bird's Eye View
         warped = cv2.warpPerspective(state_image_full, self.M, (320, 240), flags=cv2.INTER_LINEAR)
@@ -134,12 +146,28 @@ class LaneDetection:
 
         left_fit = None
         right_fit = None
+        left_detected = False
+        right_detected = False
+        lane_width_px = None
 
         # 5. Parabola fitting (x = Ay^2 + By + C)
         if len(leftx) > 10:
             left_fit = np.polyfit(lefty, leftx, 2)
+            left_detected = True
         if len(rightx) > 10:
             right_fit = np.polyfit(righty, rightx, 2)
+            right_detected = True
+
+        if left_fit is not None and right_fit is not None:
+            sample_y = np.linspace(80.0, 235.0, 6, dtype=np.float32)
+            width_samples = (
+                right_fit[0] * sample_y**2 + right_fit[1] * sample_y + right_fit[2]
+            ) - (
+                left_fit[0] * sample_y**2 + left_fit[1] * sample_y + left_fit[2]
+            )
+            valid_widths = width_samples[width_samples > 1.0]
+            if valid_widths.size > 0:
+                lane_width_px = float(np.median(valid_widths))
 
         if left_fit is None:
             left_fit = self.left_fit_old
@@ -149,16 +177,22 @@ class LaneDetection:
         self.left_fit_old = left_fit
         self.right_fit_old = right_fit
 
-        return left_fit, right_fit, self.Minv
+        return LaneDetectionResult(
+            left_fit=left_fit,
+            right_fit=right_fit,
+            Minv=self.Minv,
+            left_detected=left_detected,
+            right_detected=right_detected,
+            lane_width_px=lane_width_px,
+        )
 
     def draw_splines(self, image: np.ndarray, waypoints: np.ndarray | None = None) -> np.ndarray:
-        """
-        Native projection matrix to map real time output overlays.
-        """
+        """Draw camera-space waypoint overlays onto an image."""
         annotated = image.copy()
         h, w = image.shape[:2]
 
-        # Draw physical waypoints backwards-mapped through perspective
+        # Waypoints are expressed in the detector's 320x240 camera space. Scale
+        # them to the debug frame size used for visualization.
         if waypoints is not None and waypoints.ndim == 2 and waypoints.shape[0] == 2:
             col = (waypoints[0] / 320.0 * w).astype(int)
             row = (waypoints[1] / 240.0 * h).astype(int)

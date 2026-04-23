@@ -17,12 +17,12 @@ __all__ = ["LongitudinalController"]
 
 
 class LongitudinalController:
-    """PID throttle/brake controller.
+    """PID speed-tracking controller.
 
     The controller keeps integral and derivative state across calls.
     Call :meth:`reset` when starting a new lane-following episode.
 
-    Default gains are tuned for the JetRacer at indoor speeds (0–0.5 m/s).
+    Default gains are tuned for the JetRacer at indoor speeds (0-0.5 m/s).
     Adjust ``KP``, ``KI``, ``KD`` via ROS 2 parameters on the running node.
     """
 
@@ -59,7 +59,7 @@ class LongitudinalController:
             dt: Integration step in seconds.
 
         Returns:
-            Control effort in m/s.
+            Speed correction in m/s.
         """
         dt_val = self.default_dt if dt is None else float(dt)
         dt_val = max(dt_val, 1e-3)
@@ -97,4 +97,5 @@ class LongitudinalController:
             Clamped linear velocity command in ``[0, max_output_ms]`` m/s.
         """
         effort = self.PID_step(speed, target_speed, dt=dt)
-        return float(np.clip(effort, 0.0, self.max_output_ms))
+        commanded_speed = float(speed) + float(effort)
+        return float(np.clip(commanded_speed, 0.0, self.max_output_ms))

@@ -4,9 +4,9 @@
   <version>1.0.0</version>
   <description>
     Lane-following autonomous driving pipeline for JetRacer ROS AI Kit.
-    Integrates gradient-based lane detection, B-spline waypoint prediction,
-    selectable Stanley/MPC lateral control, and PID longitudinal control into a single
-    ROS 2 node that publishes geometry_msgs/Twist to cmd_vel.
+    Integrates bird's-eye-view lane detection, metric waypoint planning,
+    selectable Stanley/MPC lateral control, and longitudinal speed tracking into a single
+    ROS 2 node that publishes Ackermann and compatibility Twist commands.
   </description>
   <maintainer email="maintainers@example.com">JetRacer ROS 2 Maintainers</maintainer>
   <license>MIT</license>
@@ -14,6 +14,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <!-- ROS 2 runtime -->
+  <exec_depend>ackermann_msgs</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
