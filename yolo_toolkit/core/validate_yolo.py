@@ -14,7 +14,7 @@ console = Console()
 def main():
     parser = argparse.ArgumentParser(description="JetRacer YOLO Validation Script")
     parser.add_argument("--weights", type=str, required=True, help="Path to best.pt or best.engine")
-    parser.add_argument("--data", type=str, default="dataset/data.yaml", help="Path to data.yaml")
+    parser.add_argument("--data", type=str, default="../dataset/data.yaml", help="Path to data.yaml")
     parser.add_argument("--imgsz", type=int, default=640, help="Image size")
     parser.add_argument("--batch", type=int, default=16, help="Batch size")
     parser.add_argument("--split", type=str, default="val", choices=["val", "test"], help="Dataset split to validate on")

@@ -41,6 +41,7 @@ def main():
     # Validate Subcommand
     validate_parser = subparsers.add_parser("validate", help="Validate model on val/test split")
     validate_parser.add_argument("--weights", type=str, required=True, help="Path to best.pt or best.engine")
+    validate_parser.add_argument("--data", type=str, default="../dataset/data.yaml", help="Dataset config")
     validate_parser.add_argument("--split", type=str, default="val", choices=["val", "test"], help="Dataset split")
 
     # Analyze Subcommand
@@ -68,7 +69,7 @@ def main():
 
     elif args.mode == "validate":
         console.print(f"[bold blue]Launching Validation on '{args.split}' split...[/bold blue]")
-        sys.argv = [sys.argv[0], "--weights", args.weights, "--split", args.split]
+        sys.argv = [sys.argv[0], "--weights", args.weights, "--split", args.split, "--data", args.data]
         validate_main()
 
     elif args.mode == "analyze":
