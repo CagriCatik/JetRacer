@@ -1,0 +1,28 @@
+Compared with the earlier state, the base bringup and `cmd_vel_safety` arbitration are in better shape. The remaining blockers before an operative mission are below.
+
+**Findings**
+- High: the advertised boot profile is still not actually drivable. [jetracer_boot.sh](C:/Users/mccat/Desktop/JetRacer/jetracer_boot.sh:34) starts [sentinel.launch.py](C:/Users/mccat/Desktop/JetRacer/src/jetracer_bringup/launch/sentinel.launch.py:7), which only launches joystick, OLED, relay, and teleop-to-`cmd_vel_teleop`; it does not launch the hardware bridge or `twist_mux` path that exists in [jetracer.launch.py](C:/Users/mccat/Desktop/JetRacer/src/jetracer_bringup/launch/jetracer.launch.py:114). That conflicts with the operator claims in [README.md](C:/Users/mccat/Desktop/JetRacer/README.md:74) and [docs/11_Operational_Guide.md](C:/Users/mccat/Desktop/JetRacer/docs/11_Operational_Guide.md:25).
+
+- High: deployment portability is still broken. [jetracer.service](C:/Users/mccat/Desktop/JetRacer/jetracer.service:9) and [install_service.sh](C:/Users/mccat/Desktop/JetRacer/install_service.sh:6) are hardcoded to `/Users/mccat/Desktop/JetRacer`, so a clean Jetson install will not match the repo’s “no absolute path dependencies” claim.
+
+- High: the autonomy mission still launches lane following in standby, not drive-ready. [autonomy.launch.py](C:/Users/mccat/Desktop/JetRacer/src/jetracer_bringup/launch/autonomy.launch.py:121) starts the node, but both [main_config.yaml](C:/Users/mccat/Desktop/JetRacer/src/jetracer_bringup/config/main_config.yaml:5) and [lane_following.yaml](C:/Users/mccat/Desktop/JetRacer/src/jetracer_lane_following/config/lane_following.yaml:4) set `start: false`, and the node only publishes motion when `_start` is true in [lane_following_node.py](C:/Users/mccat/Desktop/JetRacer/src/jetracer_lane_following/scripts/lane_following_node.py:425). If this is intentional, the docs need to say “armed but idle,” not “full autonomy.”
+
+- High: the semantic stop stack has a runtime import fault. [semantic_behavior.py](C:/Users/mccat/Desktop/JetRacer/src/jetracer_behavior/jetracer_behavior/semantic_behavior.py:24) defines `SemanticBehaviorNode(Node)` without importing `Node` anywhere in the module header. This is an import-time failure, so the node can die even though a syntax-only compile pass stays green.
+
+- Medium: perception packaging is still fragile on a clean target. [apriltag.launch.py](C:/Users/mccat/Desktop/JetRacer/src/jetracer_perception/launch/apriltag.launch.py:8) depends on `apriltag_ros`, and [yolo_detection.py](C:/Users/mccat/Desktop/JetRacer/src/jetracer_perception/src/yolo_detection.py:12) depends on `ament_index_python`, but [jetracer_perception/package.xml](C:/Users/mccat/Desktop/JetRacer/src/jetracer_perception/package.xml:11) declares neither.
+
+- Medium: the AprilTag stack is not frame-correct yet. [apriltag.launch.py](C:/Users/mccat/Desktop/JetRacer/src/jetracer_perception/launch/apriltag.launch.py:17) uses `camera_link_optical`, but the URDF only defines [camera_link](C:/Users/mccat/Desktop/JetRacer/src/jetracer_description/urdf/jetracer.urdf.xacro:201). Even after installing `apriltag_ros`, TF is incomplete.
+
+- Medium: pre-mission validation is too thin for a real deployment claim. The only bringup test, [test_autonomy_launch.py](C:/Users/mccat/Desktop/JetRacer/src/jetracer_bringup/test/test_autonomy_launch.py:39), checks for two log strings, and the topic-validation test is still just `pass` at [line 47](C:/Users/mccat/Desktop/JetRacer/src/jetracer_bringup/test/test_autonomy_launch.py:47).
+
+**What To Add With Existing Waveshare Hardware**
+Waveshare’s stock JetRacer ROS AI Kit already gives you INA219 power sensing, a 128x32 OLED, MPU9250 IMU, encoder odometry, and an RP2040 controller: https://www.waveshare.com/wiki/JetRacer_ROS_AI_Kit
+
+- Add a real pre-arm gate in Sentinel. Do not allow mission launch until IMU is calibrated, serial heartbeat is valid, LiDAR is publishing, camera is alive, and battery/current are inside limits. Waveshare explicitly notes the IMU must boot stationary or yaw becomes unreliable.
+- Finish AprilTag relocalization/docking with the existing CSI camera. You already have the launcher stub; fix the package deps and optical TF, then use tags for map re-entry, pit-stop docking, or high-confidence localization resets.
+- Upgrade power management around INA219. The current battery percentage in [jetracer_serial_node.cpp](C:/Users/mccat/Desktop/JetRacer/src/jetracer_hardware/src/jetracer_serial_node.cpp:500) is just a linear voltage map; use voltage plus current under load for brownout prediction, derating, and abort logic.
+- Use the onboard IMU and wheel odometry more aggressively in the SLAM branch. The optional Cartographer profile currently disables both odometry and IMU in [jetracer.lua](C:/Users/mccat/Desktop/JetRacer/src/jetracer_navigation/config/cartographer/jetracer.lua:13), which leaves stock hardware unused.
+- Extend RP2040 telemetry: firmware version, watchdog state, estop reason, command acknowledgement, and if available measured steering state. That gives the supervisor something deterministic to trust beyond topic silence.
+- Align OLED defaults with the stock board. [oled_node.py](C:/Users/mccat/Desktop/JetRacer/src/jetracer_hardware/scripts/oled_node.py:28) defaults to `128x64`, while Waveshare documents `128x32`.
+
+Static review only. I did run a repository-wide `py_compile` pass, which was clean, but `colcon` is not available in this shell, so I did not do a full ROS build or live launch on target hardware.

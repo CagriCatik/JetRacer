@@ -9,6 +9,7 @@ Top-level ROS 2 launch package for the migrated JetRacer stack.
 - `lidar.launch.py`: LiDAR-only bringup
 - `laser_filter.launch.py`: LiDAR plus migrated scan filter
 - `csi_camera.launch.py`: CSI camera bringup
+- `camera_calibration.launch.py`: CSI camera plus ROS 2 `cameracalibrator`
 - `calibrate_linear.launch.py`: hardware plus odometry calibration tool
 - `nav.launch.py`: full navigation stack against a saved map
 - `slam.launch.py`: mapping-only bringup
@@ -33,6 +34,16 @@ Example:
 ros2 launch jetracer_bringup lane_following.launch.py \
   lateral_controller_type:=mpc
 ```
+
+## Camera calibration
+
+```bash
+ros2 launch jetracer_bringup camera_calibration.launch.py \
+  board_size:=5x7 \
+  square_size_m:=0.03
+```
+
+`board_size` is the checkerboard inner-corner count. `square_size_m` is the physical square edge length in meters.
 
 ## RViz settings
 

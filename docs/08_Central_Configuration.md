@@ -57,6 +57,8 @@ The new BEV pipeline uses these critical parameters to filter the track environm
 - `luminance_threshold`: Drops dark pixels (0-255). Set to `180.0` for white tape on black ground.
 - `roi_top_y`: The horizon cut depth.
 - `roi_top_width`: The width of the road trapezoid at the horizon.
+- `camera_info_topic`: `CameraInfo` topic used to rectify frames before BEV projection.
+- `use_camera_calibration`: Enable or bypass runtime undistortion.
 
 When `mpc` is selected, tuning uses:
 

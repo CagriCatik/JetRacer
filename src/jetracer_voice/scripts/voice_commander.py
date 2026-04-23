@@ -10,11 +10,12 @@ allowing you to dispatch the robot to rooms via completely localized voice comma
 
 import os
 import json
-from typing import Optional, Dict, Any
+from typing import Any
 from ament_index_python.packages import get_package_share_directory
 
 import rclpy
 from geometry_msgs.msg import PoseStamped
+from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 from rclpy.timer import Timer
 
@@ -39,12 +40,20 @@ class VoiceCommanderNode(Node):
         package_share_dir = get_package_share_directory('jetracer_voice')
         default_model = os.path.join(package_share_dir, 'models', 'vosk-model-small-en-us-0.15')
 
+        self.declare_parameter('model_path', default_model)
+        self.declare_parameter('kitchen_x', 2.5)
+        self.declare_parameter('kitchen_y', -1.2)
+
         self._load_params()
         self.add_on_set_parameters_callback(self._param_callback)
+
+        if not os.path.isdir(self._model_path):
+            self.get_logger().error(f"Configured Vosk model path does not exist: {self._model_path}")
+            raise RuntimeError(f'vosk model path does not exist: {self._model_path}')
         
         # Audio Initialization wrapped in a sandboxed try/except to prevent violent core dumps
         try:
-            self.model = Model(self.model_path)
+            self.model = Model(self._model_path)
             self.recognizer = KaldiRecognizer(self.model, 16000)
             self.p = pyaudio.PyAudio()
             self.stream = self.p.open(
@@ -69,6 +78,13 @@ class VoiceCommanderNode(Node):
         
         self.get_logger().info("Offline Voice Commander Active. Listening for 'kitchen'...")
 
+    def _resolve_model_path(self, model_path: str) -> str:
+        if os.path.isabs(model_path):
+            return model_path
+
+        package_share_dir = get_package_share_directory('jetracer_voice')
+        return os.path.join(package_share_dir, 'models', model_path)
+
     def _load_params(self, updates: dict[str, object] | None = None) -> None:
         if updates is None:
             updates = {}
@@ -78,24 +94,18 @@ class VoiceCommanderNode(Node):
                 return updates[name]
             return self.get_parameter(name).value
 
-        # Resolve package models directory
-        package_share_dir = get_package_share_directory('jetracer_voice')
-        
-        m_path = str(fetch('model_path'))
-        if not os.path.isabs(m_path):
-            m_path = os.path.join(package_share_dir, 'models', m_path)
-            
-        self._model_path = m_path
+        self._model_path = self._resolve_model_path(str(fetch('model_path')))
         self._kitchen_x = float(fetch('kitchen_x'))
         self._kitchen_y = float(fetch('kitchen_y'))
 
     def _param_callback(self, params) -> SetParametersResult:
-        from rcl_interfaces.msg import SetParametersResult
         updated = {p.name: p.value for p in params}
         
         # model_path is read-only at runtime to prevent reload crashes
-        if 'model_path' in updated and str(updated['model_path']) != self._model_path:
-             return SetParametersResult(successful=False, reason="model_path is read-only")
+        if 'model_path' in updated:
+            requested_path = self._resolve_model_path(str(updated['model_path']))
+            if requested_path != self._model_path:
+                return SetParametersResult(successful=False, reason='model_path is read-only')
 
         self._load_params(updates=updated)
         return SetParametersResult(successful=True)
@@ -110,7 +120,7 @@ class VoiceCommanderNode(Node):
             data: bytes = self.stream.read(4000, exception_on_overflow=False)
             
             if self.recognizer.AcceptWaveform(data):
-                result: Dict[str, Any] = json.loads(self.recognizer.Result())
+                result: dict[str, Any] = json.loads(self.recognizer.Result())
                 text: str = str(result.get('text', '')).lower()
                 
                 if text:

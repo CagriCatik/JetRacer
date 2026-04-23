@@ -4,7 +4,7 @@ The **`jetracer_behavior`** package serves as the "Pre-Frontal Cortex" of the Je
 
 ## Decoupled Arbitration (`twist_mux`)
 
-The core architecture prevents the vehicle from receiving simultaneous, conflicting commands. We implement a mathematical Arbiter (the Multiplexer).
+The core architecture prevents the vehicle from receiving simultaneous, conflicting commands by implementing a mathematical arbiter, referred to as a multiplexer. This design ensures that the vehicle never receives or executes opposing instructions at the same time. In complex systems, control inputs often originate from multiple sources, such as an autonomous driving module, an emergency system, or manual user input. Without a coordinating mechanism, these sources could issue conflicting commands simultaneously—for example, accelerating and braking at the same time. The arbiter serves as a central decision-making unit that processes all incoming commands, evaluates them based on defined criteria such as priorities or system states, and selects exactly one valid command to forward to the vehicle. All other competing inputs are suppressed at that moment. This approach guarantees that the vehicle operates in a consistent and controlled manner, even when multiple control processes are active concurrently.
 
 Every node transmits velocity commands linearly to `twist_mux`, but assigned uniquely enforced Priority Tags.
 
@@ -21,12 +21,16 @@ Every node transmits velocity commands linearly to `twist_mux`, but assigned uni
 The JetRacer utilizes two independent behavioral nodes that weaponize Priority 8.
 
 ### 1. Collision Assurance Logic
-The node sets a localized 30° geometric cone mathematically mapping directly onto laser returns immediately forward of the bumper. 
+
+The node sets a localized 30° geometric cone mathematically mapping directly onto laser returns immediately forward of the bumper.
+
 - *Interrupt Phase:* If distance drops rapidly below threshold, it intercepts the Multiplexer.
 - *Release Phase:* When the obstacle shifts, the node instantly releases Priority 8, letting Priority 5 snap back into operational control to continue racing dynamically!
 
 ### 2. Semantic Logic
+
 If YOLO flags `"Stop Sign"`, mathematical area comparisons calculate if the sign implies physical nearness ($[X \times Y] / [Camera\_Scale] > 15\%$).
+
 - *Interrupt Phase:* The car floods Priority 8 with Zeros to brake smoothly.
 - *Cooldown Phase:* The Node triggers an internal 5-second `Sleep` state to ignore the Stop Sign while passing it, seamlessly yielding the multiplexing channels back down to Priority 5.
 

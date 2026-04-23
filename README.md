@@ -1,6 +1,7 @@
 <div align="center">
 
 # JetRacer ROS 2
+
 **Autonomy | Safety | Jetson Nano Optimized**
 
 [![ROS 2](https://img.shields.io/badge/ROS_2-Humble-blue.svg)](https://docs.ros.org/en/humble/)
@@ -17,6 +18,9 @@
 [![Sentinel](https://img.shields.io/badge/Interface-Gamepad_Messenger-blueviolet.svg)](#one-button-mission-control)
 [![OLED](https://img.shields.io/badge/Display-OLED_Dashboard-blue.svg)](#onboard-telemetry)
 [![Platform](https://img.shields.io/badge/Hardware-Jetson_Nano-76B900.svg?logo=nvidia&logoColor=white)](https://developer.nvidia.com/embedded-computing)
+[![YOLO](https://img.shields.io/badge/Perception-YOLO11-00FFFF.svg?logo=ultralytics&logoColor=white)](#machine-learning-yolo-training)
+[![TensorRT](https://img.shields.io/badge/Optimization-TensorRT-76B900.svg?logo=nvidia&logoColor=white)](#-exporting-for-jetson-tensorrt)
+[![Augmentation](https://img.shields.io/badge/Augmentation-Orientation--Aware-blueviolet.svg)](#machine-learning-yolo-training)
 
 *Professional grade ROS 2 Humble transformation for the Waveshare JetRacer platform. Designed for stability, deterministic control, and comprehensive observability.*
 
@@ -25,9 +29,11 @@
 ---
 
 ## Production Hardening
+
 This repository has undergone a comprehensive architectural audit and hardening process to transition from a prototype to a deployment-ready robotics platform.
 
 ### Key Enhancements
+
 - **Arbitration Integrity:** All navigation and behavior commands are routed through `twist_mux` with strict priority-based overrides (Emergency > Manual > Behavior > Lane > Nav2).
 - **Environmental Portability:** Removed all absolute path dependencies. ML models (YOLO, Vosk) and configurations utilize `ament_index` for dynamic, system-agnostic resolution.
 - **Native Performance:** Critical control bridges (Ackermann conversion) have been ported from Python to **Native C++** to reduce IPC latency and jitter on the Jetson Nano.
@@ -51,6 +57,7 @@ This repository has undergone a comprehensive architectural audit and hardening 
 ## Deployment Guide
 
 ### 1. Containerized Setup
+
 Prepare your Jetson Nano using the [Ubuntu 20.04 Workaround](docs/00_ROS2-Jetson-Nano.md).
 
 ```bash
@@ -69,11 +76,14 @@ bash install_service.sh
 ## Operation Guide
 
 ### 1. Manual Driving (Always-on)
+
 The robot boots into **Sentinel Mode**. You can drive manually immediately by holding **L2** (Deadman Switch).
+
 - **Steering**: Left Stick
 - **Throttle**: Right Stick (Vertical)
 
 ### 2. One-Button Mission Control
+
 Trigger full autonomous launches directly from the gamepad:
 
 | Mission | Combo | Description |
@@ -83,6 +93,7 @@ Trigger full autonomous launches directly from the gamepad:
 | **E-Stop** | `MODE` | Immediate mission teardown and stop. |
 
 ### 3. Manual Launching (Advanced)
+
 If you wish to launch specific stacks manually without the sentinel:
 
 ```bash
@@ -93,9 +104,22 @@ ros2 launch jetracer_bringup jetracer.launch.py
 ros2 launch jetracer_bringup autonomy.launch.py
 ```
 
+### 4. Camera Calibration
+
+The Waveshare JetRacer ROS kit uses a wide-angle IMX219-160 CSI camera. The lane follower now consumes `CameraInfo` at runtime and rectifies frames before the BEV warp, so calibration is no longer optional.
+
+```bash
+ros2 launch jetracer_bringup camera_calibration.launch.py \
+  board_size:=5x7 \
+  square_size_m:=0.03
+```
+
+Use the checkerboard size that matches your target's inner-corner count. After the GUI turns green, click `CALIBRATE`, then `COMMIT`. The default calibration target file is `jetracer_perception/config/cam_640x480.yaml`.
+
 ---
 
 ## Active Diagnostics
+
 The system utilizes the ROS 2 Diagnostic stack. Monitor hardware health in real-time:
 
 ```bash
@@ -103,6 +127,7 @@ ros2 topic echo /diagnostics
 ```
 
 **Monitored Metrics:**
+
 - **Serial Status:** Port connectivity and throughput.
 - **Heartbeat Frequency:** Command freshness and safety timing.
 - **Sensor Streaming:** IMU and Wheel Odom update rates.
@@ -113,6 +138,7 @@ ros2 topic echo /diagnostics
 ---
 
 ## Testing & Validation
+
 Verify system health before high-speed deployments using the integrated smoke tests:
 
 ```bash
@@ -122,34 +148,43 @@ colcon test-result --all
 
 ---
 
-## Machine Learning (YOLO Training)
+## YOLO Training
 
-This repository includes an industrial-grade **YOLO Training Toolkit** for high-precision traffic sign detection.
+This project includes a hardware-optimized **YOLO Training Toolkit** engineered for traffic sign recognition tasks where directional orientation (e.g. Left Turn vs Right Turn) is critical.
 
-### 1. Training (on PC with GPU)
-Configure your parameters in `yolo_toolkit/configs/hyperparameters.yaml` (expert defaults provided).
+### 1. Training (Expert-Level)
 
-```bash
-# Install ML dependencies
+Configure hyperparameters in `yolo_toolkit/configs/hyperparameters.yaml` (Pre-configured to disable dangerous horizontal flips).
+
+```powershell
+# Install optimized ML environment
 pip install -r yolo_toolkit/requirements.txt
 
-# Start expert training
-python yolo_toolkit/core/train_yolo.py --data dataset/data.yaml
+# Start training mission
+python yolo_toolkit/main.py train
 ```
-Training results will be saved to `yolo_toolkit/outputs/`.
+
+*Results are consolidated in `yolo_toolkit/outputs/`.*
 
 ### 2. Exporting for Jetson (TensorRT)
-To achieve high FPS on the Jetson Nano, export the model to a Half-Precision TensorRT engine:
 
-```bash
-# On the Jetson Nano
-python yolo_toolkit/core/export_yolo.py --weights best.pt --format engine --half
+To achieve high-frequency inference (>20 FPS) on the Jetson Nano, the model must be optimized into a TensorRT Engine:
+
+```powershell
+# Generate FP16 Optimized Engine
+python yolo_toolkit/main.py export --weights best.pt --half
 ```
 
-For more details, see the [YOLO Toolkit Manual](yolo_toolkit/README.md).
+### 3. Integrated Detections
+
+The autonomous stack identifies 9 traffic classes including `STOP`, `PERSON`, and `PRIORITY_ROAD`. Detections are translated into standard `vision_msgs` and used by the behavioral decison stack to trigger robot interactions.
+
+For full details, see the [YOLO Toolkit Manual](yolo_toolkit/README.md).
 
 ## Documentation Index
+
 - [System Architecture Audit](docs/01_System_Overview.md)
 - [Hardening & Safety Implementation](docs/06_Behavior_and_Arbitration.md)
 - [Jetson Nano Optimization](docs/03_Deployment_and_Docker.md)
 - [Hardware Diagnostic Specs](docs/02_Hardware_and_Assembly.md)
+- [Camera Calibration Workflow](docs/12_Camera_Calibration.md)

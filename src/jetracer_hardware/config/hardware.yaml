@@ -17,3 +17,4 @@
     servo_bias: 0
     command_timeout_sec: 1.0
     send_period_sec: 0.02
+    wheel_radius: 0.035

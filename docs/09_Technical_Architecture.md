@@ -331,23 +331,26 @@ flowchart TD
 - namespace default: `csi_cam_0`
 - topic path includes `image_raw` (+ camera info)
 - Jetson-oriented GStreamer pipeline defaults via `nvarguscamerasrc`.
+- launch arguments expose capture width, height, FPS, flip method, and calibration file URL.
 
 ## 8.2 Lane-following pipeline (High-Definition Autonomy)
 
 `lane_following_node.py` executes per camera frame using a **MultiThreadedExecutor** to isolate high-intensity CV tasks from odometry parsing:
 
 1. compressed image decode
-2. resize to **320x240** (High-Definition space)
-3. **Perspective Warp:** transform to Bird's-Eye View (BEV)
-4. **Luminance Thresholding:** isolate white tape on black ground
-5. **Sliding Window Polynomial Fit:** fit 2nd-degree parabolas to detected pixels
-6. **Inverse Warp:** project solved trajectories back to camera space
-7. selectable lateral control (`stanley` or `mpc`) + PID longitudinal control
-8. publish `cmd_vel_lane` and waypoints/debug image
+2. optional frame rectification from `CameraInfo`
+3. resize to **320x240** (High-Definition space)
+4. **Perspective Warp:** transform to Bird's-Eye View (BEV)
+5. **Luminance Thresholding:** isolate white tape on black ground
+6. **Sliding Window Polynomial Fit:** fit 2nd-degree parabolas to detected pixels
+7. **Inverse Warp:** project solved trajectories back to camera space
+8. selectable lateral control (`stanley` or `mpc`) + PID longitudinal control
+9. publish `cmd_vel_lane` and waypoints/debug image
 
 Inputs:
 
 - image: configurable compressed topic (default `csi_cam_0/image_raw/compressed`)
+- calibration: `csi_cam_0/camera_info`
 - odometry: `/odom`
 
 Outputs:
@@ -359,7 +362,9 @@ Outputs:
 ```mermaid
 flowchart LR
   IMG[csi_cam_0/image_raw/compressed] --> DEC[cv_bridge decode]
-  DEC --> RSZ[Resize 320x240]
+  INFO[csi_cam_0/camera_info] --> RECT[Undistort/Rectify]
+  DEC --> RECT
+  RECT --> RSZ[Resize 320x240]
   RSZ --> WARP[Perspective Warp]
   WARP --> LUM[Luminance Threshold]
   LUM --> HIST[Histogram Sliding Window]

@@ -6,8 +6,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=mccat
-WorkingDirectory=/Users/mccat/Desktop/JetRacer
-ExecStart=/bin/bash /Users/mccat/Desktop/JetRacer/jetracer_boot.sh
+WorkingDirectory=%h/JetRacer
+ExecStart=/bin/bash %h/JetRacer/jetracer_boot.sh
 Restart=always
 RestartSec=5
 StandardOutput=journal

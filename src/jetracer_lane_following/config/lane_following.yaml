@@ -1,7 +1,7 @@
 # Local parameters for jetracer_lane_following
 lane_following:
   ros__parameters:
-    start: false
+    start: true
     max_speed_ms: 0.35
     min_speed_ms: 0.05
     kp: 1.5
@@ -32,3 +32,5 @@ lane_following:
     smoothing_beta: 30.0
     publish_debug_image: true
     camera_topic: "csi_cam_0/image_raw/compressed"
+    camera_info_topic: "csi_cam_0/camera_info"
+    use_camera_calibration: true

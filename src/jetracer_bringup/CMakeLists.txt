@@ -6,8 +6,8 @@ find_package(ament_cmake REQUIRED)
 install(FILES README.md DESTINATION share/${PROJECT_NAME})
 
 install(PROGRAMS
-  scripts/calibrate_linear.py
   scripts/controller_relay.py
+  scripts/sentinel_validator.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

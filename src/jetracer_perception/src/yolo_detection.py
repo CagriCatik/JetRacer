@@ -41,7 +41,7 @@ class YoloDetectionNode(Node):
 
         # Resolve package models directory
         package_share_dir = get_package_share_directory('jetracer_perception')
-        default_model = os.path.join(package_share_dir, 'models', 'yolo11n.pt')
+        default_model = os.path.join(package_share_dir, 'models', 'yolo11n-best.pt')
 
         self.declare_parameter('model_path', default_model)
         self.declare_parameter('conf_thres', 0.5)

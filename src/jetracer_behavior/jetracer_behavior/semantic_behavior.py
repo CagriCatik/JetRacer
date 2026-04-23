@@ -16,6 +16,7 @@ from geometry_msgs.msg import Twist
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.timer import Timer
 from vision_msgs.msg import Detection2DArray

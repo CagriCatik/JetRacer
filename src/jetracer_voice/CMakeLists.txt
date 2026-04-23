@@ -19,9 +19,15 @@ install(FILES README.md DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY
   launch
   config
-  models
   DESTINATION share/${PROJECT_NAME}
 )
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/models")
+  install(DIRECTORY
+    models
+    DESTINATION share/${PROJECT_NAME}
+  )
+endif()
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

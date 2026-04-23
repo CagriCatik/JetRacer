@@ -14,22 +14,42 @@ When the car needs to follow a path at high speeds, computational latency must b
 ```mermaid
 graph TD
     CAM[Camera /image_raw] -->|CompressedImage| CORE[Tracking Node]
-    CORE -->|1. Resize| HD[320x240 HD Space]
-    HD -->|2. Perspective Warp| BEV[Bird's-Eye View]
-    BEV -->|3. Masking| MASK[Luma/HSV Binary Mask]
-    MASK -->|4. Histogram| BASE[Line Base Anchors]
-    BASE -->|5. Sliding Windows| POLY[Polynomial Fit]
-    POLY -->|6. Inverse Warp| WAYP[Trajectory Vector]
+    INFO[CameraInfo] --> CORE
+    CORE -->|1. Undistort| UDT[Rectified Camera Frame]
+    UDT -->|2. Resize| HD[320x240 HD Space]
+    HD -->|3. Perspective Warp| BEV[Bird's-Eye View]
+    BEV -->|4. Masking| MASK[Luma/HSV Binary Mask]
+    MASK -->|5. Histogram| BASE[Line Base Anchors]
+    BASE -->|6. Sliding Windows| POLY[Polynomial Fit]
+    POLY -->|7. Inverse Warp| WAYP[Trajectory Vector]
     WAYP --> SEL{Controller}
     SEL -->|autonomy| AUT[Stanley / MPC]
     SEL -->|basic| PD[PD Controller]
 ```
 
 - **Stack-Wide Consistency:** Both the primary racer (`lane_following_node.py`) and the generic color tracker (`line_follow.py`) now benefit from the **Bird's-Eye View** and **Sliding Window** architecture.
+- **Lens-Aware Runtime:** The lane follower now consumes `csi_cam_0/camera_info` and rectifies the wide-angle IMX219 image before applying the fixed BEV warp.
 - **Resolution Shift:** Operates at **320x240**, providing 3.3x more pixel density than legacy ports.
 - **Bird's-Eye View (BEV):** Uses a `cv2.warpPerspective` matrix to transform the road into a top-down view for parallel line math.
 - **Robust Tracking:** The **Sliding Window** approach enables the car to "follow" lines through gaps or shadows by maintaining momentum from previous frames.
 - **Deterministic Control:** The solved trajectory is mathematically projected back into camera space, ensuring the controllers receive smooth, lag-free steering vectors.
+
+### Camera Calibration Workflow
+
+The JetRacer ROS kit ships with a wide-angle IMX219-160 camera. Calibration is required for consistent lane geometry, AprilTag pose estimates, and image-space overlays.
+
+```bash
+ros2 launch jetracer_bringup camera_calibration.launch.py \
+  board_size:=5x7 \
+  square_size_m:=0.03
+```
+
+- `board_size` is the checkerboard inner-corner count in `cols x rows`.
+- `square_size_m` is the physical checker size in meters.
+- The calibration GUI subscribes to `/csi_cam_0/image_raw` and commits through `/csi_cam_0/set_camera_info`.
+- The default calibration file is `jetracer_perception/config/cam_640x480.yaml`.
+
+See [12. Camera Calibration](12_Camera_Calibration.md) for the full procedure.
 
 ### 2. The Deep-Learning Semantic Tracker
 **File:** `yolo_detection.py`

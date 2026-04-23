@@ -4,7 +4,7 @@
 
 lane_following:
   ros__parameters:
-    start: false
+    start: true
     max_speed_ms: 0.35
     min_speed_ms: 0.05
     kp: 1.5
@@ -35,10 +35,12 @@ lane_following:
     smoothing_beta: 30.0
     publish_debug_image: true
     camera_topic: "csi_cam_0/image_raw/compressed"
+    camera_info_topic: "csi_cam_0/camera_info"
+    use_camera_calibration: true
 
 yolo_detection:
   ros__parameters:
-    model_path: "yolo11n.pt"
+    model_path: "yolo11n-best.engine"
     conf_thres: 0.65
     device: "cuda:0"
     camera_topic: "csi_cam_0/image_raw/compressed"
@@ -48,7 +50,7 @@ yolo_detection:
 
 semantic_behavior:
   ros__parameters:
-    trigger_class_name: "stop sign"
+    trigger_class_name: "stop"
     camera_width: 640.0
     camera_height: 480.0
     box_size_trigger_pct: 0.15
@@ -72,6 +74,18 @@ foxglove_bridge:
   ros__parameters:
     port: 8765
     send_buffer_limit: 100000000
+
+thermal_monitor:
+  ros__parameters:
+    update_period: 2.0
+    warning_temp: 75.0
+    critical_temp: 85.0
+
+safety_supervisor:
+  ros__parameters:
+    min_voltage: 9.5
+    max_temp: 82.0
+    publish_period_sec: 0.05
 
 multipoint_navigation:
   ros__parameters:

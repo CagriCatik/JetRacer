@@ -1,7 +1,9 @@
 # twist_mux configuration for JetRacer ROS 2
 #
 # Priority (highest = wins):
-#   10 - Teleop keyboard/joystick  (operator override, immediate)
+#  255 - Safety supervisor / collision halt
+#   10 - Teleop keyboard/joystick   (operator override, immediate)
+#    8 - Behavior stack             (semantic stop behaviors)
 #    5 - Lane following             (autonomous AI pipeline)
 #    3 - Nav2 controller_server     (Nav2 autonomous navigation)
 #
@@ -15,6 +17,10 @@
 twist_mux:
   ros__parameters:
     topics:
+      - name: safety
+        topic: cmd_vel_safety
+        timeout: 0.2
+        priority: 255
       - name: teleop
         topic: cmd_vel_teleop
         timeout: 0.1

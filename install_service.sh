@@ -2,9 +2,13 @@
 
 # JetRacer Service Installer
 # Installs the jetracer.service to /etc/systemd/system/
+# Automatically detects the JetRacer repository location.
 
-SERVICE_FILE="/Users/mccat/Desktop/JetRacer/jetracer.service"
-BOOT_SCRIPT="/Users/mccat/Desktop/JetRacer/jetracer_boot.sh"
+# Determine the repository root
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+SERVICE_FILE="${REPO_ROOT}/jetracer.service"
+BOOT_SCRIPT="${REPO_ROOT}/jetracer_boot.sh"
 
 echo "--- JetRacer Service Installation ---"
 

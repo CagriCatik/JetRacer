@@ -35,7 +35,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CameraInfo, CompressedImage
 from std_msgs.msg import Float32MultiArray
 
 from lane_detection import LaneDetection
@@ -100,6 +100,8 @@ class LaneFollowingNode(Node):
         # I/O
         self.declare_parameter('publish_debug_image', True)
         self.declare_parameter('camera_topic', 'csi_cam_0/image_raw/compressed')
+        self.declare_parameter('camera_info_topic', 'csi_cam_0/camera_info')
+        self.declare_parameter('use_camera_calibration', True)
 
         self._load_params()
         self.add_on_set_parameters_callback(self._param_callback)
@@ -140,6 +142,15 @@ class LaneFollowingNode(Node):
         self._bridge = CvBridge()
         self._current_speed_ms: float = 0.0
         self._last_control_stamp_sec: float | None = None
+        self._camera_info_size: tuple[int, int] | None = None
+        self._camera_matrix: np.ndarray | None = None
+        self._dist_coeffs: np.ndarray | None = None
+        self._rectification_matrix: np.ndarray | None = None
+        self._projection_matrix: np.ndarray | None = None
+        self._undistort_map1: np.ndarray | None = None
+        self._undistort_map2: np.ndarray | None = None
+        self._undistort_size: tuple[int, int] | None = None
+        self._warned_missing_camera_info = False
 
         self._cmd_pub = self.create_publisher(Twist, 'cmd_vel_lane', 1)
         self._debug_img_pub = self.create_publisher(
@@ -160,12 +171,20 @@ class LaneFollowingNode(Node):
         self._img_sub = self.create_subscription(
             CompressedImage, camera_topic, self._image_callback, img_qos, callback_group=self._camera_cb_group
         )
+        self._camera_info_sub = self.create_subscription(
+            CameraInfo,
+            self._camera_info_topic,
+            self._camera_info_callback,
+            img_qos,
+            callback_group=self._camera_cb_group,
+        )
         self._odom_sub = self.create_subscription(Odometry, 'odom', self._odom_callback, 10, callback_group=self._odom_cb_group)
 
         self.get_logger().info(
             f'lane_following ready -> controller={self._lateral_controller_type} '
             f'start={self._start} max_speed={self._max_speed_ms:.2f} m/s '
-            f'max_steer={self._max_steering_rad:.2f} rad way_type={self._way_type}'
+            f'max_steer={self._max_steering_rad:.2f} rad way_type={self._way_type} '
+            f'calibration={"on" if self._use_camera_calibration else "off"}'
         )
 
     def _load_params(self, updates: dict[str, object] | None = None) -> None:
@@ -214,6 +233,8 @@ class LaneFollowingNode(Node):
         self._smoothing_beta = float(fetch('smoothing_beta'))
 
         self._publish_debug = bool(fetch('publish_debug_image'))
+        self._camera_info_topic = str(fetch('camera_info_topic'))
+        self._use_camera_calibration = bool(fetch('use_camera_calibration'))
 
         self._integral_windup_limit = max(0.0, self._integral_windup_limit)
         self._max_steering_rad = max(0.0, self._max_steering_rad)
@@ -329,6 +350,122 @@ class LaneFollowingNode(Node):
         self._longitudinal.integral_windup_limit = self._integral_windup_limit
         self._longitudinal.max_output_ms = self._max_speed_ms
 
+    @staticmethod
+    def _scale_intrinsic_matrix(
+        matrix: np.ndarray,
+        src_size: tuple[int, int],
+        dst_size: tuple[int, int],
+    ) -> np.ndarray:
+        scaled = matrix.astype(np.float32, copy=True)
+        src_w, src_h = src_size
+        dst_w, dst_h = dst_size
+        if src_w <= 0 or src_h <= 0:
+            return scaled
+
+        scale_x = float(dst_w) / float(src_w)
+        scale_y = float(dst_h) / float(src_h)
+        scaled[0, 0] *= scale_x
+        scaled[0, 2] *= scale_x
+        scaled[1, 1] *= scale_y
+        scaled[1, 2] *= scale_y
+        scaled[2, 2] = 1.0
+        return scaled
+
+    def _camera_info_callback(self, msg: CameraInfo) -> None:
+        if len(msg.k) != 9 or msg.k[0] <= 0.0 or msg.k[4] <= 0.0:
+            return
+
+        self._camera_info_size = (int(msg.width), int(msg.height))
+        self._camera_matrix = np.array(msg.k, dtype=np.float32).reshape(3, 3)
+        if len(msg.d) > 0:
+            self._dist_coeffs = np.array(msg.d, dtype=np.float32)
+        else:
+            self._dist_coeffs = np.zeros(5, dtype=np.float32)
+
+        if len(msg.r) == 9:
+            rectification = np.array(msg.r, dtype=np.float32).reshape(3, 3)
+        else:
+            rectification = np.eye(3, dtype=np.float32)
+        if not np.isfinite(rectification).all() or not np.any(rectification):
+            rectification = np.eye(3, dtype=np.float32)
+        self._rectification_matrix = rectification
+
+        if len(msg.p) == 12:
+            projection = np.array(msg.p, dtype=np.float32).reshape(3, 4)[:, :3]
+            if (
+                np.isfinite(projection).all()
+                and projection[0, 0] > 0.0
+                and projection[1, 1] > 0.0
+            ):
+                self._projection_matrix = projection
+            else:
+                self._projection_matrix = None
+        else:
+            self._projection_matrix = None
+
+        self._undistort_map1 = None
+        self._undistort_map2 = None
+        self._undistort_size = None
+        if self._warned_missing_camera_info:
+            self.get_logger().info(
+                f'camera calibration received from {self._camera_info_topic}'
+            )
+            self._warned_missing_camera_info = False
+
+    def _rectify_frame(self, frame_bgr: np.ndarray) -> np.ndarray:
+        if not self._use_camera_calibration:
+            return frame_bgr
+
+        if (
+            self._camera_matrix is None
+            or self._dist_coeffs is None
+            or self._rectification_matrix is None
+            or self._camera_info_size is None
+        ):
+            if not self._warned_missing_camera_info:
+                self.get_logger().warn(
+                    f'camera calibration enabled but no CameraInfo received on '
+                    f'{self._camera_info_topic}; using raw frames for now.'
+                )
+                self._warned_missing_camera_info = True
+            return frame_bgr
+
+        height, width = frame_bgr.shape[:2]
+        current_size = (width, height)
+        if self._undistort_size != current_size:
+            scaled_k = self._scale_intrinsic_matrix(
+                self._camera_matrix, self._camera_info_size, current_size
+            )
+            if (
+                self._projection_matrix is not None
+                and np.isfinite(self._projection_matrix).all()
+                and self._projection_matrix[0, 0] > 0.0
+                and self._projection_matrix[1, 1] > 0.0
+            ):
+                target_k = self._scale_intrinsic_matrix(
+                    self._projection_matrix, self._camera_info_size, current_size
+                )
+            else:
+                target_k = scaled_k
+
+            self._undistort_map1, self._undistort_map2 = cv2.initUndistortRectifyMap(
+                scaled_k,
+                self._dist_coeffs,
+                self._rectification_matrix,
+                target_k,
+                current_size,
+                cv2.CV_16SC2,
+            )
+            self._undistort_size = current_size
+
+        return cv2.remap(
+            frame_bgr,
+            self._undistort_map1,
+            self._undistort_map2,
+            interpolation=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_CONSTANT,
+        )
+
     def _param_callback(self, params) -> SetParametersResult:
         updated = {p.name: p.value for p in params}
         validation = self._validate_param_update(updated)
@@ -380,7 +517,8 @@ class LaneFollowingNode(Node):
             self.get_logger().error(f'cv_bridge decode error: {exc}')
             return
 
-        frame_cv = cv2.resize(frame_bgr, (320, 240), interpolation=cv2.INTER_LINEAR)
+        working_frame = self._rectify_frame(frame_bgr)
+        frame_cv = cv2.resize(working_frame, (320, 240), interpolation=cv2.INTER_LINEAR)
 
         left_fit, right_fit, Minv = self._detector.lane_detection(frame_cv)
         waypoints = waypoint_prediction(
@@ -443,7 +581,7 @@ class LaneFollowingNode(Node):
         self._viz_pub.publish(viz_msg)
 
         if self._publish_debug:
-            self._publish_debug_frame(frame_bgr, waypoints, target_speed_ms, steer_norm)
+            self._publish_debug_frame(working_frame, waypoints, target_speed_ms, steer_norm)
 
     def _publish_debug_frame(
         self,
@@ -479,6 +617,15 @@ class LaneFollowingNode(Node):
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
             (0, 255, 0) if self._start else (0, 0, 255),
+            1,
+        )
+        cv2.putText(
+            annotated,
+            f'cal: {"RECTIFIED" if self._use_camera_calibration and self._camera_matrix is not None else "RAW"}',
+            (8, 80),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (255, 200, 0),
             1,
         )
 

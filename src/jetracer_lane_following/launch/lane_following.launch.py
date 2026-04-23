@@ -56,6 +56,16 @@ def generate_launch_description() -> LaunchDescription:
             default_value='csi_cam_0/image_raw/compressed',
             description='Compressed image topic from the CSI camera.',
         ),
+        DeclareLaunchArgument(
+            'camera_info_topic',
+            default_value='csi_cam_0/camera_info',
+            description='CameraInfo topic used for online undistortion.',
+        ),
+        DeclareLaunchArgument(
+            'use_camera_calibration',
+            default_value='true',
+            description='Rectify frames using CameraInfo before BEV processing.',
+        ),
         DeclareLaunchArgument('publish_debug_image', default_value='true'),
 
         Node(
@@ -90,6 +100,8 @@ def generate_launch_description() -> LaunchDescription:
                 'spline_smoothness': LaunchConfiguration('spline_smoothness'),
                 'way_type': LaunchConfiguration('way_type'),
                 'camera_topic': LaunchConfiguration('camera_topic'),
+                'camera_info_topic': LaunchConfiguration('camera_info_topic'),
+                'use_camera_calibration': LaunchConfiguration('use_camera_calibration'),
                 'publish_debug_image': LaunchConfiguration('publish_debug_image'),
             }],
         ),

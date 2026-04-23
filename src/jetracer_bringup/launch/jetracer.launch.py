@@ -37,6 +37,22 @@ def generate_launch_description() -> LaunchDescription:
         output='screen'
     )
 
+    thermal_monitor = Node(
+        package='jetracer_hardware',
+        executable='thermal_monitor.py',
+        name='thermal_monitor',
+        output='screen',
+        parameters=[config_file],
+    )
+
+    safety_supervisor = Node(
+        package='jetracer_behavior',
+        executable='safety_supervisor',
+        name='safety_supervisor',
+        output='screen',
+        parameters=[config_file],
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument(
             'hardware_params_file',
@@ -128,7 +144,7 @@ def generate_launch_description() -> LaunchDescription:
 
         # ── cmd_vel arbitration ─────────────────────────────────────────────
         # twist_mux selects the highest-priority active source of steering-angle Twists:
-        #   teleop (10) > lane (5) > vision (4) > nav2_steer (3)
+        #   safety (255) > teleop (10) > behavior (8) > lane (5) > vision (4) > nav2_steer (3)
         # Its output directly feeds the hardware (cmd_vel).
         Node(
             package='twist_mux',
@@ -140,6 +156,8 @@ def generate_launch_description() -> LaunchDescription:
             ])],
             remappings=[('cmd_vel_out', 'cmd_vel')],
         ),
+        thermal_monitor,
+        safety_supervisor,
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(

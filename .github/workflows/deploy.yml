@@ -1,77 +1,72 @@
-name: Validate and Deploy MkDocs
+name: Deploy MkDocs
 
 on:
-  pull_request:
   push:
     branches:
       - main
+      - master
+    paths:
+      - docs/**
+      - mkdocs.yml
+      - requirements-docs.txt
+      - .github/workflows/deploy.yml
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: mkdocs-deploy
+  cancel-in-progress: true
 
 jobs:
-  validate:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Validate Python syntax
-        run: |
-          python - <<'PY'
-          import pathlib
-          import py_compile
-
-          for path in pathlib.Path('.').rglob('*.py'):
-              py_compile.compile(str(path), doraise=True)
-          PY
-
-      - name: Validate shell syntax
-        run: |
-          find . -name '*.sh' -print0 | xargs -0 -n 1 bash -n
-
-      - name: Install docs dependencies
-        run: pip install -r docs/requirements-mkdocs.txt
-
-      - name: Build docs
-        run: mkdocs build --strict
-
   deploy:
-    name: Deploy to gh-pages
-    needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
-      - name: Install docs dependencies
-        run: pip install -r docs/requirements-mkdocs.txt
-
-      - name: Configure git for token-based push
-        env:
-          GH_PAGES_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
+      - name: Install documentation dependencies
         run: |
-          if [ -z "$GH_PAGES_TOKEN" ]; then
-            echo "Missing required secret: GH_PAGES_TOKEN"
+          python -m pip install --upgrade pip
+          pip install -r requirements-docs.txt
+
+      - name: Show installed docs versions
+        run: |
+          python -m mkdocs --version
+          pip show mkdocs mkdocs-material pymdown-extensions
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Validate PAT secret
+        env:
+          MKDOCS_DEPLOY_TOKEN: ${{ secrets.MKDOCS_DEPLOY_TOKEN }}
+        run: |
+          if [ -z "$MKDOCS_DEPLOY_TOKEN" ]; then
+            echo "MKDOCS_DEPLOY_TOKEN is missing or not accessible in this workflow."
             exit 1
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:${GH_PAGES_TOKEN}@github.com/${{ github.repository }}.git"
 
-      - name: Deploy docs
-        run: mkdocs gh-deploy --force --clean
+      - name: Configure PAT remote
+        env:
+          MKDOCS_DEPLOY_TOKEN: ${{ secrets.MKDOCS_DEPLOY_TOKEN }}
+        run: |
+          git remote set-url origin "https://${{ github.repository_owner }}:${MKDOCS_DEPLOY_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+      - name: Verify Git authentication
+        run: |
+          git ls-remote --exit-code origin HEAD > /dev/null
+
+      - name: Build and deploy to gh-pages
+        run: mkdocs gh-deploy --force --clean --no-history

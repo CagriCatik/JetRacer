@@ -221,6 +221,18 @@
     <origin xyz="${camera_x} ${camera_y} ${camera_z}" rpy="0 0 0"/>
   </joint>
 
+  <!-- Camera optical frame: standard ROS convention for CSI cameras -->
+  <link name="camera_link_optical">
+    <xacro:box_inertia mass="0.0001" x="0.001" y="0.001" z="0.001"/>
+  </link>
+
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_link_optical"/>
+    <!-- Rotate to align with optical axis (Z forward, X right, Y down) -->
+    <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+  </joint>
+
   <link name="imu_link">
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>

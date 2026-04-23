@@ -20,6 +20,7 @@ from rclpy.qos import qos_profile_sensor_data
 from rclpy.node import Node
 from rclpy.timer import Timer
 from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Bool
 
 
 class CollisionAssuranceNode(Node):
@@ -46,7 +47,8 @@ class CollisionAssuranceNode(Node):
 
         self._sub = self.create_subscription(LaserScan, 'scan', self._scan_callback, qos_profile_sensor_data, callback_group=self._sub_group)
         self._cmd_sub = self.create_subscription(Twist, 'cmd_vel', self._cmd_callback, 10, callback_group=self._sub_group)
-        self._pub = self.create_publisher(Twist, 'cmd_vel_behavior', 10)
+        self._pub = self.create_publisher(Twist, 'cmd_vel_safety', 10)
+        self._state_pub = self.create_publisher(Bool, '/control/collision_blocked', 10)
 
         self._is_blocked: bool = False
         self._cone_offset: float = 0.0  # Dynamic center of the detection cone
@@ -130,6 +132,9 @@ class CollisionAssuranceNode(Node):
             self.get_logger().info("Path clear. Releasing brakes.")
 
         self._is_blocked = blocked
+        state_msg = Bool()
+        state_msg.data = blocked
+        self._state_pub.publish(state_msg)
 
     def _publish_loop(self) -> None:
         """Drives the Twist Multiplexer when blocking conditions are met."""

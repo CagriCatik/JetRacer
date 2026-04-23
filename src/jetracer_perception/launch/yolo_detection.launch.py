@@ -8,7 +8,7 @@ def generate_launch_description() -> LaunchDescription:
     return LaunchDescription([
         DeclareLaunchArgument(
             'model_path',
-            default_value='/workspaces/JetRacer-ROS2/models/yolo11n.pt',
+            default_value='yolo11n-best.pt',
             description='Path to trained YOLO11 model (.pt or .engine)'
         ),
         DeclareLaunchArgument(

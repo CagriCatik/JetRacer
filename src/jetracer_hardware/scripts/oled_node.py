@@ -26,7 +26,7 @@ class OledNode(Node):
             raise RuntimeError("Missing OLED dependencies")
 
         self.declare_parameter('width', 128)
-        self.declare_parameter('height', 64)
+        self.declare_parameter('height', 32)
         self.declare_parameter('i2c_bus', 1)
 
         # Initialize Hardware
@@ -121,13 +121,23 @@ class OledNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
+    node = None
     try:
         node = OledNode()
         rclpy.spin(node)
-    except Exception:
+    except KeyboardInterrupt:
         pass
+    except Exception as exc:
+        if node is not None:
+            node.get_logger().error(f"oled_node failed: {exc}")
+        else:
+            print(f"oled_node startup failed: {exc}")
+        raise
     finally:
-        rclpy.shutdown()
+        if node is not None:
+            node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

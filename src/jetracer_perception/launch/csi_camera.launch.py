@@ -14,6 +14,10 @@ def generate_launch_description() -> LaunchDescription:
     use_gst_timestamps = LaunchConfiguration('use_gst_timestamps')
     camera_info_url = LaunchConfiguration('camera_info_url')
     gscam_config = LaunchConfiguration('gscam_config')
+    image_width = LaunchConfiguration('image_width')
+    image_height = LaunchConfiguration('image_height')
+    image_fps = LaunchConfiguration('image_fps')
+    flip_method = LaunchConfiguration('flip_method')
 
     return LaunchDescription([
         DeclareLaunchArgument('sensor_id', default_value='0'),
@@ -21,6 +25,10 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument('frame_id', default_value='camera_link'),
         DeclareLaunchArgument('sync_sink', default_value='false'),
         DeclareLaunchArgument('use_gst_timestamps', default_value='false'),
+        DeclareLaunchArgument('image_width', default_value='640'),
+        DeclareLaunchArgument('image_height', default_value='480'),
+        DeclareLaunchArgument('image_fps', default_value='20'),
+        DeclareLaunchArgument('flip_method', default_value='0'),
         DeclareLaunchArgument(
             'camera_info_url',
             default_value=[
@@ -36,9 +44,11 @@ def generate_launch_description() -> LaunchDescription:
             'gscam_config',
             default_value=[
                 'nvarguscamerasrc sensor-id=', sensor_id,
-                ' ! video/x-raw(memory:NVMM), width=(int)640, height=(int)480, ',
-                'format=(string)NV12, framerate=(fraction)20/1 ! ',
-                'nvvidconv flip-method=0 ! videoconvert',
+                ' ! video/x-raw(memory:NVMM), width=(int)', image_width,
+                ', height=(int)', image_height,
+                ', format=(string)NV12, framerate=(fraction)', image_fps,
+                '/1 ! nvvidconv flip-method=', flip_method,
+                ' ! videoconvert',
             ],
         ),
         Node(

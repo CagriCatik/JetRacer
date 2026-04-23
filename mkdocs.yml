@@ -79,3 +79,6 @@ nav:
   - 07 Voice Commander Stack: 07_Voice_Commander_Stack.md
   - 08 Central Configuration: 08_Central_Configuration.md
   - 09 Technical Architecture: 09_Technical_Architecture.md
+  - 10 Runtime Tuning: 10_Runtime_Tuning.md
+  - 11 Operational Guide: 11_Operational_Guide.md
+  - 12 Camera Calibration: 12_Camera_Calibration.md

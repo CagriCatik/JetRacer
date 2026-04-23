@@ -20,9 +20,9 @@ def load_config(path):
 
 def main():
     parser = argparse.ArgumentParser(description="JetRacer Expert Training Wrapper")
-    parser.add_argument("--config", type=str, default="yolo_toolkit/configs/hyperparameters.yaml", help="Path to hyperparams YAML")
+    parser.add_argument("--config", type=str, default="configs/hyperparameters.yaml", help="Path to hyperparams YAML")
     parser.add_argument("--data", type=str, default="dataset/data.yaml", help="Path to dataset YAML")
-    parser.add_argument("--output", type=str, default="yolo_toolkit/outputs", help="Output root")
+    parser.add_argument("--output", type=str, default="outputs", help="Output root")
     
     args = parser.parse_args()
     

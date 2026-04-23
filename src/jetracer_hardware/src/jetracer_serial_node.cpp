@@ -35,7 +35,20 @@ constexpr uint8_t kHead2 = 0x55;
 constexpr uint8_t kSendTypeVelocity = 0x11;
 constexpr uint8_t kSendTypeParams = 0x12;
 constexpr uint8_t kSendTypeCoefficient = 0x13;
+constexpr uint8_t kRecvTypeTelemetry = 0x20;  // RP2040 telemetry response
 constexpr std::size_t kMaxFrameSize = 64;
+
+// RP2040 telemetry structure (extended from firmware)
+struct RP2040Telemetry {
+  uint16_t firmware_version;      // CRC of firmware blob
+  uint8_t watchdog_resets_count;  // Count since Jetson boot
+  uint8_t estop_reason;           // Why E-stop was triggered
+  uint8_t command_ack_rate;       // % of commands acknowledged
+  int16_t steering_angle_measured; // Potentiometer feedback (optional)
+  uint16_t voltage_rail_3v3;      // 3.3V rail voltage (mV)
+  uint16_t voltage_rail_5v0;      // 5.0V rail voltage (mV) if available
+  uint8_t reserved;
+};
 
 uint8_t checksum(const uint8_t * buffer, std::size_t length)
 {
@@ -77,6 +90,7 @@ public:
     declare_parameter<int>("servo_bias", 0);
     declare_parameter<double>("command_timeout_sec", 1.0);
     declare_parameter<double>("send_period_sec", 0.02);
+    declare_parameter<double>("wheel_radius", 0.035);
 
     load_parameters();
 
@@ -116,6 +130,7 @@ public:
     diagnostic_updater_->add("Command Heartbeat", this, &JetRacerSerialNode::diagnostic_heartbeat);
     diagnostic_updater_->add("Sensor Stream", this, &JetRacerSerialNode::diagnostic_sensors);
     diagnostic_updater_->add("Battery Health", this, &JetRacerSerialNode::diagnostic_battery);
+    diagnostic_updater_->add("RP2040 Status", this, &JetRacerSerialNode::diagnostic_rp2040);
   }
 
   ~JetRacerSerialNode() override
@@ -157,6 +172,7 @@ private:
     servo_bias_ = get_parameter("servo_bias").as_int();
     command_timeout_sec_ = get_parameter("command_timeout_sec").as_double();
     send_period_sec_ = get_parameter("send_period_sec").as_double();
+    wheel_radius_ = get_parameter("wheel_radius").as_double();
   }
 
   void open_serial_port()
@@ -225,6 +241,8 @@ private:
         send_timer_ = create_wall_timer(
           std::chrono::duration_cast<std::chrono::milliseconds>(send_period),
           std::bind(&JetRacerSerialNode::send_velocity_timer, this));
+      } else if (name == "wheel_radius") {
+        wheel_radius_ = parameter.as_double();
       }
     }
 
@@ -486,38 +504,96 @@ private:
     const double current = static_cast<double>(decode_int16(data[18], data[19])) / 1000.0;
     publish_battery_state(voltage, current);
 
-    const double l_vel = static_cast<double>(decode_int16(data[34], data[35])) / 1000.0; // Assuming m/s scaling if translated by RP2040
-    const double r_vel = static_cast<double>(decode_int16(data[36], data[37])) / 1000.0;
-    const double steering = odom_yaw; // Measured steering is approximated by odom_yaw? 
-    // Actually, on JetRacer, the RP2040 can report measured steering. 
-    // If the protocol had it, it would be in a specific byte. 
-    // For now, I'll use the commanded yaw as a placeholder or assuming it's odom_yaw.
-    publish_joint_state(l_vel, r_vel, steering);
+    const double rear_left_linear_speed =
+      static_cast<double>(decode_int16(data[34], data[35])) / 1000.0;
+    const double rear_right_linear_speed =
+      static_cast<double>(decode_int16(data[36], data[37])) / 1000.0;
+    publish_joint_state(current_time, rear_left_linear_speed, rear_right_linear_speed, delta_time);
   }
 
   void publish_battery_state(double voltage, double current)
   {
+    // Cache current measurement for diagnostics and brownout prediction
+    last_battery_current_ = current;
+
+    // Battery model: OCV = V_measured + (I_load × R_internal)
+    // This compensates for voltage sag under current draw
+    double ocv_estimated = voltage + (current * battery_internal_resistance_ / 1000.0);
+
+    // Percentage based on OCV model (12.6V full, 9.0V empty for 3S 18650)
+    double percentage_ocv = (ocv_estimated - 9.0) / (12.6 - 9.0);
+    double percentage_clamped = std::max(0.0, std::min(1.0, percentage_ocv));
+
+    // Brownout prediction: What is minimum voltage if we draw peak current (3A)?
+    double peak_predicted_current = 3000.0;  // mA: typical Nano peak during vision inference
+    double min_voltage_at_peak = ocv_estimated - (peak_predicted_current * battery_internal_resistance_ / 1000.0);
+
+    // Health determination
+    uint8_t health_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_GOOD;
+    if (min_voltage_at_peak < battery_abort_threshold_) {
+      health_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_DEAD;
+      if (brownout_warning_count_ < 100) {
+        RCLCPP_ERROR(
+          get_logger(),
+          "CRITICAL: Battery will brownout at peak load. OCV=%.2fV, min_peak=%.2fV < abort_threshold=%.2fV",
+          ocv_estimated, min_voltage_at_peak, battery_abort_threshold_);
+        brownout_warning_count_++;
+      }
+    } else if (min_voltage_at_peak < battery_derating_threshold_) {
+      health_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_WARM;
+      if (brownout_warning_count_ < 50) {
+        RCLCPP_WARN(
+          get_logger(),
+          "WARNING: Battery degraded. OCV=%.2fV, min_peak=%.2fV. Recommend speed derating.",
+          ocv_estimated, min_voltage_at_peak);
+        brownout_warning_count_++;
+      }
+    } else if (voltage < battery_brownout_threshold_) {
+      health_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_WARM;
+    }
+
+    // Construct and publish BatteryState message
     sensor_msgs::msg::BatteryState msg;
     msg.header.stamp = now();
     msg.voltage = static_cast<float>(voltage);
     msg.current = static_cast<float>(current);
     msg.design_capacity = 2.6; // 2600mAh typical 18650
-    msg.percentage = static_cast<float>(std::max(0.0, std::min(1.0, (voltage - 9.0) / (12.6 - 9.0))));
+    msg.percentage = static_cast<float>(percentage_clamped);
     msg.power_supply_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_STATUS_DISCHARGING;
-    msg.power_supply_health = sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_GOOD;
+    msg.power_supply_health = health_status;
     msg.power_supply_technology = sensor_msgs::msg::BatteryState::POWER_SUPPLY_TECHNOLOGY_LION;
     msg.present = true;
     battery_pub_->publish(msg);
     last_battery_voltage_ = voltage;
   }
 
-  void publish_joint_state(double l_vel, double r_vel, double steering)
+  void publish_joint_state(
+    const rclcpp::Time & stamp,
+    double rear_left_linear_speed,
+    double rear_right_linear_speed,
+    double delta_time)
   {
+    if (wheel_radius_ <= 1e-6) {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(),
+        *get_clock(),
+        2000,
+        "wheel_radius must be positive to publish joint_states.");
+      return;
+    }
+
+    const double rear_left_angular_speed = rear_left_linear_speed / wheel_radius_;
+    const double rear_right_angular_speed = rear_right_linear_speed / wheel_radius_;
+
+    rear_left_wheel_position_ += rear_left_angular_speed * delta_time;
+    rear_right_wheel_position_ += rear_right_angular_speed * delta_time;
+
     sensor_msgs::msg::JointState msg;
-    msg.header.stamp = now();
-    msg.name = {"left_wheel_joint", "right_wheel_joint", "steering_joint"};
-    msg.velocity = {l_vel, r_vel, 0.0};
-    msg.position = {0.0, 0.0, steering};
+    msg.header.stamp = stamp;
+    // Only publish joints backed by measured wheel telemetry from the RP2040.
+    msg.name = {"rear_left_wheel_joint", "rear_right_wheel_joint"};
+    msg.position = {rear_left_wheel_position_, rear_right_wheel_position_};
+    msg.velocity = {rear_left_angular_speed, rear_right_angular_speed};
     joint_pub_->publish(msg);
   }
 
@@ -528,14 +604,66 @@ private:
     std_msgs::msg::Int32 msg;
     msg.data = value;
     publisher->publish(msg);
+  }// Estimate OCV from loaded measurement
+    double ocv_estimated = last_battery_voltage_ + (last_battery_current_ * battery_internal_resistance_ / 1000.0);
+    double min_voltage_at_peak = ocv_estimated - (3000.0 * battery_internal_resistance_ / 1000.0);
+
+    std::string status_msg;
+    if (min_voltage_at_peak < battery_abort_threshold_) {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "BROWNOUT CRITICAL");
+      status_msg = "Will dropout at peak load";
+    } else if (min_voltage_at_peak < battery_derating_threshold_) {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Low Battery - Derate Speed");
+      status_msg = "Degraded, recommend 50% speed limit";
+    } else if (last_battery_voltage_ < battery_brownout_threshold_) {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Low Battery");
+      status_msg = "Voltage low, current OK";
+    } else {
+      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Battery Healthy");
+      status_msg = "Normal";
+    }
+
+    stat.add("Voltage (V)", last_battery_voltage_);
+    stat.add("Current (mA)", last_battery_current_);
+    stat.add("OCV Estimated (V)", ocv_estimated);
+    stat.add("Min at 3A Peak (V)", min_voltage_at_peak);
+    stat.add("Status", status_msg);
+    stat.add("Brownout Warnings", static_cast<int>(brownout_warning_count_));
+  }
+
+  void diagnostic_rp2040(diagnostic_updater::DiagnosticStatusWrapper & stat)
+  {
+    // Monitor RP2040 firmware health
+    uint8_t health = diagnostic_msgs::msg::DiagnosticStatus::OK;
+    std::string health_msg = "Nominal";
+
+    if (rp2040_telemetry_.watchdog_resets_count > rp2040_watchdog_reset_threshold_) {
+      health = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+      health_msg = "Excessive watchdog resets";
+    }
+
+    if (rp2040_telemetry_.command_ack_rate < 95) {
+      health = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+      health_msg = "Low command acknowledgement rate";
+    }
+
+    stat.summary(health, health_msg);
+
+    stat.add("Firmware Version", static_cast<int>(rp2040_telemetry_.firmware_version));
+    stat.add("Watchdog Resets", static_cast<int>(rp2040_telemetry_.watchdog_resets_count));
+    stat.add("E-Stop Reason", static_cast<int>(rp2040_telemetry_.estop_reason));
+    stat.add("Command ACK Rate (%)", static_cast<int>(rp2040_telemetry_.command_ack_rate));
+    stat.add("Steering Angle (rad)", static_cast<double>(rp2040_telemetry_.steering_angle_measured) / 1000.0);
+    stat.add("3.3V Rail (mV)", static_cast<int>(rp2040_telemetry_.voltage_rail_3v3));
+    stat.add("5.0V Rail (mV)", static_cast<int>(rp2040_telemetry_.voltage_rail_5v0));
+    stat.add("Total Commands", static_cast<int>(rp2040_command_count_));
+    stat.add("Total Acks", static_cast<int>(rp2040_ack_count_));
   }
 
   void diagnostic_serial(diagnostic_updater::DiagnosticStatusWrapper & stat)
   {
     if (serial_port_.is_open()) {
       stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Port Open");
-      stat.add("Port Name", port_name_);
-      stat.add("Baud Rate", std::to_string(baud_rate_));
     } else {
       stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Port Closed");
     }
@@ -616,6 +744,7 @@ private:
   int servo_bias_{};
   double command_timeout_sec_{};
   double send_period_sec_{};
+  double wheel_radius_{};
 
   double commanded_x_{0.0};
   double commanded_y_{0.0};
@@ -623,6 +752,21 @@ private:
   rclcpp::Time last_command_time_;
   rclcpp::Time last_receive_time_;
   double last_battery_voltage_{12.6};
+  double last_battery_current_{0.0};
+  double battery_internal_resistance_{0.5};  // Ohms: typical 18650 3S
+  double battery_brownout_threshold_{9.6};   // Minimum safe voltage (Jetson spec)
+  double battery_derating_threshold_{10.0};  // Below this: derate to 50% speed
+  double battery_abort_threshold_{9.3};      // Below this: abort mission immediately
+  uint32_t brownout_warning_count_{0};       // Track warnings for diagnostics
+  
+  // RP2040 telemetry tracking
+  RP2040Telemetry rp2040_telemetry_{};
+  uint32_t rp2040_command_count_{0};
+  uint32_t rp2040_ack_count_{0};
+  uint32_t rp2040_watchdog_reset_threshold_{5};  // Warn if > 5 resets/hour
+  
+  rear_left_wheel_position_{0.0};
+  double rear_right_wheel_position_{0.0};
 };
 
 int main(int argc, char ** argv)
