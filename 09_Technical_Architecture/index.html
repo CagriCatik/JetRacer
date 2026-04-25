@@ -1,0 +1,3394 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation portal for the JetRacer ROS 2 autonomous stack">
+      
+      
+      
+      
+        <link rel="prev" href="../08_Central_Configuration/">
+      
+      
+        <link rel="next" href="../10_Runtime_Tuning/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>9. Technical Architecture - JetRacer ROS 2 Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Space+Grotesk:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Space Grotesk";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#9-technical-architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="JetRacer ROS 2 Documentation" class="md-header__button md-logo" aria-label="JetRacer ROS 2 Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            JetRacer ROS 2 Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              9. Technical Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../00_ROS2-Jetson-Nano/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  0. Jetson Nano Workaround
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../01_System_Overview/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  1. System Overview
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../02_Hardware_and_Assembly/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  2. Hardware and Assembly
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../03_Deployment_and_Docker/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  3. Deployment and Docker
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../04_Perception_Stack/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  4. Perception Stack
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../05_Navigation_and_SLAM/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  5. Navigation and SLAM
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../06_Behavior_and_Arbitration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  6. Behavior and Arbitration
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../07_Voice_Commander_Stack/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  7. Voice Commander Stack
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../08_Central_Configuration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  8. Central Configuration
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  9. Technical Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../10_Runtime_Tuning/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  10. Runtime Tuning
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../11_Operational_Guide/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  11. Operational Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../12_Camera_Calibration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  12. Camera Calibration
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../13_Gazebo_Simulation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  13. Gazebo Simulation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../14_RRT_Local_Planner/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  14. RRT* Local Planner
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../15_rviz2_workflow/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  15. RViz2 Workflow
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../16_Preflight_Checklist/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  16. Preflight Checklist
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="JetRacer ROS 2 Documentation" class="md-nav__button md-logo" aria-label="JetRacer ROS 2 Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    JetRacer ROS 2 Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00_ROS2-Jetson-Nano/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0. Jetson Nano Workaround
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01_System_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. System Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02_Hardware_and_Assembly/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Hardware and Assembly
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03_Deployment_and_Docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Deployment and Docker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04_Perception_Stack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Perception Stack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05_Navigation_and_SLAM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Navigation and SLAM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06_Behavior_and_Arbitration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Behavior and Arbitration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07_Voice_Commander_Stack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Voice Commander Stack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08_Central_Configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Central Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Technical Architecture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Technical Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-architecture-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Architecture Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-package-topology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Package Topology
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-build-and-packaging-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Build and Packaging Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Build and Packaging Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-build-system-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Build-system split
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-implications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Implications
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-launch-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Launch Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Launch Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-layered-launch-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Layered launch model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-runtime-profiles-what-starts-what" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Runtime profiles (what starts what)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-command-and-arbitration-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Command and Arbitration Plane
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Command and Arbitration Plane">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-contract-on-twistangularz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Contract on Twist.angular.z
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-arbitration-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Arbitration path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-safety-characteristics-in-command-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Safety characteristics in command plane
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-hardware-and-sensor-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Hardware and Sensor Plane
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#61-jetracer_serial_node-responsibilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 jetracer_serial_node responsibilities
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#62-lidar-and-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 LiDAR and filtering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#63-calibration-helper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Calibration helper
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-localization-and-tf-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Localization and TF Plane
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#71-ekf-fusion-robot_localization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 EKF fusion (robot_localization)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#72-tf-frame-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 TF frame hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-perception-and-behavior-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Perception and Behavior Plane
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#81-camera-ingest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.1 Camera ingest
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#82-lane-following-pipeline-high-definition-autonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.2 Lane-following pipeline (High-Definition Autonomy)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#83-classical-vision-behaviors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3 Classical vision behaviors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#84-yolo-semantic-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.4 YOLO semantic detection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#85-behavior-override-nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.5 Behavior override nodes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-navigation-slam-and-mission-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Navigation, SLAM, and Mission Plane
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#91-nav2-map-based-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.1 Nav2 (map-based mode)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#92-plannercontroller-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2 Planner/controller architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#93-slam-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3 SLAM backends
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#94-multipoint-mission-runner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4 Multipoint mission runner
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-voice-and-human-io-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Voice and Human I/O Plane
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#101-teleop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.1 Teleop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#102-voice-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.2 Voice stack
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-topic-contract-reference-key-runtime-interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Topic Contract Reference (Key Runtime Interfaces)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-parameter-and-configuration-layering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Parameter and Configuration Layering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#121-central-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.1 Central config
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#122-domain-configs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.2 Domain configs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#123-effective-precedence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.3 Effective precedence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-safety-and-fault-tolerance-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Safety and Fault-Tolerance Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="13. Safety and Fault-Tolerance Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#131-safety_supervisor-priority-255" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.1 safety_supervisor (priority 255)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#132-thermal_monitor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.2 thermal_monitor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#133-slip_monitor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.3 slip_monitor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#134-hardware-driver-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.4 Hardware driver safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#135-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.5 Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-known-architectural-caveats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Known Architectural Caveats
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-extension-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Extension Guidelines
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10_Runtime_Tuning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Runtime Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11_Operational_Guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Operational Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12_Camera_Calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Camera Calibration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13_Gazebo_Simulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Gazebo Simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14_RRT_Local_Planner/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14. RRT* Local Planner
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15_rviz2_workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15. RViz2 Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16_Preflight_Checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16. Preflight Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-architecture-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Architecture Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-package-topology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Package Topology
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-build-and-packaging-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Build and Packaging Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Build and Packaging Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-build-system-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Build-system split
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-implications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Implications
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-launch-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Launch Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Launch Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-layered-launch-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Layered launch model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-runtime-profiles-what-starts-what" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Runtime profiles (what starts what)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-command-and-arbitration-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Command and Arbitration Plane
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Command and Arbitration Plane">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-contract-on-twistangularz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Contract on Twist.angular.z
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-arbitration-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Arbitration path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-safety-characteristics-in-command-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Safety characteristics in command plane
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-hardware-and-sensor-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Hardware and Sensor Plane
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#61-jetracer_serial_node-responsibilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 jetracer_serial_node responsibilities
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#62-lidar-and-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 LiDAR and filtering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#63-calibration-helper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Calibration helper
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-localization-and-tf-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Localization and TF Plane
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#71-ekf-fusion-robot_localization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 EKF fusion (robot_localization)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#72-tf-frame-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 TF frame hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-perception-and-behavior-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Perception and Behavior Plane
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#81-camera-ingest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.1 Camera ingest
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#82-lane-following-pipeline-high-definition-autonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.2 Lane-following pipeline (High-Definition Autonomy)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#83-classical-vision-behaviors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3 Classical vision behaviors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#84-yolo-semantic-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.4 YOLO semantic detection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#85-behavior-override-nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.5 Behavior override nodes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-navigation-slam-and-mission-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Navigation, SLAM, and Mission Plane
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#91-nav2-map-based-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.1 Nav2 (map-based mode)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#92-plannercontroller-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2 Planner/controller architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#93-slam-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3 SLAM backends
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#94-multipoint-mission-runner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4 Multipoint mission runner
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-voice-and-human-io-plane" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Voice and Human I/O Plane
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#101-teleop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.1 Teleop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#102-voice-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.2 Voice stack
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-topic-contract-reference-key-runtime-interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Topic Contract Reference (Key Runtime Interfaces)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-parameter-and-configuration-layering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Parameter and Configuration Layering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#121-central-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.1 Central config
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#122-domain-configs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.2 Domain configs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#123-effective-precedence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.3 Effective precedence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-safety-and-fault-tolerance-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Safety and Fault-Tolerance Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="13. Safety and Fault-Tolerance Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#131-safety_supervisor-priority-255" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.1 safety_supervisor (priority 255)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#132-thermal_monitor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.2 thermal_monitor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#133-slip_monitor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.3 slip_monitor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#134-hardware-driver-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.4 Hardware driver safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#135-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.5 Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-known-architectural-caveats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Known Architectural Caveats
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-extension-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Extension Guidelines
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="9-technical-architecture">9. Technical Architecture<a class="headerlink" href="#9-technical-architecture" title="Permanent link">&para;</a></h1>
+<p>This document is a code-level architecture reference for the ROS 2 stack under <code>src/</code>.</p>
+<p>It complements the higher-level overview pages by documenting:</p>
+<ul>
+<li>package boundaries and build model</li>
+<li>launch composition and runtime profiles</li>
+<li>topic contracts and command arbitration</li>
+<li>localization/navigation/perception/control internals</li>
+<li>parameter/config layering</li>
+<li>safety behavior and known architectural caveats</li>
+</ul>
+<h2 id="1-architecture-scope">1. Architecture Scope<a class="headerlink" href="#1-architecture-scope" title="Permanent link">&para;</a></h2>
+<p>The workspace implements a modular ROS 2 system for an Ackermann JetRacer platform with these major planes:</p>
+<ul>
+<li><strong>Hardware plane</strong>: serial motor/IMU/odom bridge + LiDAR bringup/filtering.</li>
+<li><strong>State-estimation plane</strong>: EKF fusion into a canonical <code>/odom</code>.</li>
+<li><strong>Perception plane</strong>: camera + classical vision + YOLO detections.</li>
+<li><strong>Behavior plane</strong>: semantic and LiDAR emergency override logic.</li>
+<li><strong>Planning plane</strong>: Nav2 + SLAM + multipoint patrol + map tooling.</li>
+<li><strong>Command plane</strong>: topic-priority arbitration and command adaptation.</li>
+<li><strong>Human I/O plane</strong>: teleop + voice capture/TTS/ASR helpers.</li>
+</ul>
+<h2 id="2-package-topology">2. Package Topology<a class="headerlink" href="#2-package-topology" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Build Type</th>
+<th>Primary Role</th>
+<th>Installed Executables</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>jetracer_bringup</code></td>
+<td><code>ament_cmake</code></td>
+<td>Cross-package launch orchestration</td>
+<td>launch-only package</td>
+</tr>
+<tr>
+<td><code>jetracer_description</code></td>
+<td><code>ament_cmake</code></td>
+<td>URDF/xacro, TF geometry, RViz assets, joint state animator</td>
+<td><code>joint_state_publisher.py</code></td>
+</tr>
+<tr>
+<td><code>jetracer_gazebo</code></td>
+<td><code>ament_cmake</code></td>
+<td>Gazebo Harmonic simulation (Ackermann drive, camera, LiDAR, IMU)</td>
+<td>launch-only package</td>
+</tr>
+<tr>
+<td><code>jetracer_hardware</code></td>
+<td><code>ament_cmake</code></td>
+<td>MCU serial bridge, LiDAR launch, scan filtering, calibration</td>
+<td><code>jetracer_serial_node</code>, <code>laser_filter.py</code>, <code>calibrate_linear.py</code></td>
+</tr>
+<tr>
+<td><code>jetracer_localization</code></td>
+<td><code>ament_cmake</code></td>
+<td>EKF localization launch/config</td>
+<td>launch-only package</td>
+</tr>
+<tr>
+<td><code>jetracer_perception</code></td>
+<td><code>ament_cmake</code></td>
+<td>Camera and vision nodes (classical + YOLO)</td>
+<td><code>color_tracking.py</code>, <code>object_tracking.py</code>, <code>motion_detect.py</code>, <code>face_detect.py</code>, <code>yolo_detection.py</code></td>
+</tr>
+<tr>
+<td><code>jetracer_lane_following</code></td>
+<td><code>ament_cmake</code></td>
+<td>High-speed lane-following pipeline with selectable lateral control (<code>stanley</code>/<code>mpc</code>)</td>
+<td><code>lane_following_node.py</code> (+ installed math libs)</td>
+</tr>
+<tr>
+<td><code>jetracer_navigation</code></td>
+<td><code>ament_cmake</code></td>
+<td>Nav2 integration, <code>rrt_star_planner</code></td>
+<td>Provides high-level path planning (Nav2) and local obstacle avoidance (RRT*) and converts generic geometry <code>Twist</code> to Ackermann <code>Twist</code>.</td>
+</tr>
+<tr>
+<td><code>jetracer_behavior</code></td>
+<td><code>ament_python</code></td>
+<td>Priority safety/semantic behavioral overrides</td>
+<td><code>semantic_behavior.py</code>, <code>collision_assurance.py</code>, <code>safety_supervisor.py</code>, <code>slip_monitor.py</code></td>
+</tr>
+<tr>
+<td><code>jetracer_teleop</code></td>
+<td><code>ament_cmake</code></td>
+<td>keyboard/joystick teleoperation</td>
+<td><code>teleop_key.py</code>, <code>teleop_joy.py</code></td>
+</tr>
+<tr>
+<td><code>jetracer_voice</code></td>
+<td><code>ament_cmake</code></td>
+<td>VAD/ASR/TTS/assistant helpers</td>
+<td><code>vad.py</code>, <code>tts_en.py</code>, <code>tts_cn.py</code>, <code>voice_commander.py</code>, <code>ginput.py</code>, <code>iat.py</code>, <code>aiui.py</code></td>
+</tr>
+</tbody>
+</table>
+<pre class="mermaid"><code>flowchart TB
+  B[jetracer_bringup]
+  D[jetracer_description]
+  G[jetracer_gazebo]
+  H[jetracer_hardware]
+  L[jetracer_localization]
+  P[jetracer_perception]
+  LF[jetracer_lane_following]
+  N[jetracer_navigation]
+  BE[jetracer_behavior]
+  T[jetracer_teleop]
+  V[jetracer_voice]
+
+  B --&gt; D
+  B --&gt; H
+  B --&gt; L
+  B --&gt; N
+  B --&gt; P
+  B --&gt; LF
+  B --&gt; BE
+  B --&gt; T
+  B --&gt; V
+  G --&gt; D
+
+  P --&gt; BE
+  LF --&gt; H
+  N --&gt; H
+  L --&gt; N</code></pre>
+<h2 id="3-build-and-packaging-model">3. Build and Packaging Model<a class="headerlink" href="#3-build-and-packaging-model" title="Permanent link">&para;</a></h2>
+<h3 id="31-build-system-split">3.1 Build-system split<a class="headerlink" href="#31-build-system-split" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Most packages are <strong><code>ament_cmake</code></strong> and install Python scripts via <code>install(PROGRAMS ...)</code> into <code>lib/&lt;package&gt;</code>.</li>
+<li><code>jetracer_behavior</code> is <strong><code>ament_python</code></strong> with setuptools console scripts.</li>
+</ul>
+<h3 id="32-implications">3.2 Implications<a class="headerlink" href="#32-implications" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Script paths are stable for ROS launch execution (<code>package + executable</code>), independent of source-tree location.</li>
+<li>The lane-following libs are installed beside <code>lane_following_node.py</code>; the node explicitly adjusts <code>sys.path</code> to import sibling modules at runtime.</li>
+<li><code>jetracer_localization/scripts/odom_pose_to_odometry.py</code> is intentionally not installed to avoid duplicate <code>/odom</code> publishers when EKF is active.</li>
+</ul>
+<h2 id="4-launch-architecture">4. Launch Architecture<a class="headerlink" href="#4-launch-architecture" title="Permanent link">&para;</a></h2>
+<h3 id="41-layered-launch-model">4.1 Layered launch model<a class="headerlink" href="#41-layered-launch-model" title="Permanent link">&para;</a></h3>
+<p><code>jetracer_bringup</code> is the orchestration layer. Package-level launches remain the component boundaries.</p>
+<pre class="mermaid"><code>flowchart TD
+  A[jetracer_bringup/*.launch.py] --&gt; B[jetracer.launch.py base]
+  A --&gt; C[nav.launch.py full nav]
+  A --&gt; D[slam.launch.py mapping]
+  A --&gt; E[slam_nav.launch.py mapping + nav]
+  A --&gt; F[autonomy.launch.py AI behavior stack]
+  B --&gt; B1[robot_state_publisher]
+  B --&gt; B2[jetracer_hardware/hardware.launch.py]
+  B --&gt; B3[jetracer_localization/localization.launch.py]
+  B --&gt; B4[cmd_vel_to_steering.py]
+  B --&gt; B5[twist_mux]
+  C --&gt; B
+  C --&gt; C1[lidar.launch.py]
+  C --&gt; C2[csi_camera.launch.py]
+  C --&gt; C3[jetracer_navigation/nav.launch.py]
+  D --&gt; B
+  D --&gt; C1
+  D --&gt; C2
+  D --&gt; D1[jetracer_navigation/slam.launch.py]
+  E --&gt; B
+  E --&gt; C1
+  E --&gt; C2
+  E --&gt; E1[jetracer_navigation/slam_nav.launch.py]</code></pre>
+<h3 id="42-runtime-profiles-what-starts-what">4.2 Runtime profiles (what starts what)<a class="headerlink" href="#42-runtime-profiles-what-starts-what" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Base robot profile</strong>: <code>jetracer_bringup/jetracer.launch.py</code></li>
+<li>robot description publishing</li>
+<li>serial hardware bridge</li>
+<li>EKF localization</li>
+<li>nav command adapter</li>
+<li><code>twist_mux</code> arbitration</li>
+<li><strong>Navigation profile</strong>: <code>jetracer_bringup/nav.launch.py</code></li>
+<li>base profile + LiDAR + camera + Nav2 map-based stack</li>
+<li><strong>SLAM profile</strong>: <code>jetracer_bringup/slam.launch.py</code></li>
+<li>base profile + LiDAR + camera + selected SLAM backend</li>
+<li><strong>SLAM+Nav profile</strong>: <code>jetracer_bringup/slam_nav.launch.py</code></li>
+<li>base profile + LiDAR + camera + SLAM + Nav2 without map server/AMCL</li>
+<li><strong>Autonomy AI profile</strong>: <code>jetracer_bringup/autonomy.launch.py</code></li>
+<li>camera + lane follower + YOLO + behavior nodes + foxglove bridge</li>
+<li>Additional launch arguments vs. base profile:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dry_run</code></td>
+<td><code>false</code></td>
+<td>Suppress all physical motor commands</td>
+</tr>
+<tr>
+<td><code>safe_mode</code></td>
+<td><code>false</code></td>
+<td>Cap speed at <code>safe_mode_max_speed_ms</code> (0.20 m/s)</td>
+</tr>
+<tr>
+<td><code>debug_mode</code></td>
+<td><code>false</code></td>
+<td>Enable debug image publishing</td>
+</tr>
+<tr>
+<td><code>start_yolo</code></td>
+<td><code>true</code></td>
+<td>Skip GPU YOLO inference to save memory</td>
+</tr>
+<tr>
+<td><code>start_camera</code></td>
+<td><code>true</code></td>
+<td>Start CSI camera pipeline</td>
+</tr>
+<tr>
+<td><code>start_base</code></td>
+<td><code>true</code></td>
+<td>Start hardware + EKF + twist_mux</td>
+</tr>
+<tr>
+<td><code>start_lidar</code></td>
+<td><code>true</code></td>
+<td>Start RPLidar driver</td>
+</tr>
+</tbody>
+</table>
+<pre class="mermaid"><code>sequenceDiagram
+  participant U as Operator
+  participant BL as bringup/nav.launch.py
+  participant JL as jetracer.launch.py
+  participant HW as hardware.launch.py
+  participant EKF as localization.launch.py
+  participant NV as navigation/nav.launch.py
+
+  U-&gt;&gt;BL: ros2 launch jetracer_bringup nav.launch.py
+  BL-&gt;&gt;JL: include base stack
+  JL-&gt;&gt;HW: include serial hardware node
+  JL-&gt;&gt;EKF: include EKF node
+  JL-&gt;&gt;JL: start cmd_vel_to_steering + twist_mux
+  BL-&gt;&gt;BL: include lidar + csi camera
+  BL-&gt;&gt;NV: include Nav2 stack (map/amcl/planner/controller/bt)
+  NV-&gt;&gt;JL: controller output remap cmd_vel -&gt; cmd_vel_nav
+  JL-&gt;&gt;NV: adapter publishes cmd_vel_nav_steer into mux path</code></pre>
+<h2 id="5-command-and-arbitration-plane">5. Command and Arbitration Plane<a class="headerlink" href="#5-command-and-arbitration-plane" title="Permanent link">&para;</a></h2>
+<h3 id="51-contract-on-twistangularz">5.1 Contract on <code>Twist.angular.z</code><a class="headerlink" href="#51-contract-on-twistangularz" title="Permanent link">&para;</a></h3>
+<p>The stack uses two command semantics:</p>
+<ul>
+<li><strong>Nav2 internal output</strong> (<code>cmd_vel_nav</code>): yaw-rate-like command from Nav2 controllers.</li>
+<li><strong>Actuator-facing command topics</strong> (<code>cmd_vel_*</code> into mux): steering-angle-like command expected by JetRacer MCU.</li>
+</ul>
+<p><code>cmd_vel_to_steering.py</code> bridges these semantics for Nav2 by applying:</p>
+<p><code>steering = atan(wheelbase * angular_z / linear_x)</code> (with low-speed guard and clamp).</p>
+<h3 id="52-arbitration-path">5.2 Arbitration path<a class="headerlink" href="#52-arbitration-path" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>flowchart
+    CAM --&gt; YOLO[yolo_detection]
+    YOLO --&gt; SB[semantic_behavior]
+
+    LDR --&gt; RRT[rrt_star_planner]
+
+    LF --&gt;|cmd_vel_lane| MUX[twist_mux]
+    SB --&gt;|cmd_vel_behavior| MUX
+    CA[collision_assurance] --&gt;|cmd_vel_behavior| MUX
+    RRT --&gt;|cmd_vel_rrt P6| MUX
+    SS[safety_supervisor] --&gt;|cmd_vel_safety P255| MUX
+    T[teleop_key / teleop_joy] --&gt;|cmd_vel_teleop P10| MUX
+    V[color/line/object/face] --&gt;|cmd_vel_vision P4| MUX
+    N[Nav2 controller_server] --&gt;|cmd_vel_nav| S[cmd_vel_to_steering]
+    S --&gt;|cmd_vel_nav_steer P3| MUX
+    MUX --&gt;|cmd_vel| H[jetracer_serial_node]</code></pre>
+<p><code>twist_mux</code> priorities (<code>src/jetracer_bringup/config/twist_mux.yaml</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Priority</th>
+<th>Timeout</th>
+<th>Publisher</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cmd_vel_safety</code></td>
+<td><strong>255</strong></td>
+<td>0.2 s</td>
+<td><code>safety_supervisor</code> — hardware faults</td>
+</tr>
+<tr>
+<td><code>cmd_vel_teleop</code></td>
+<td>10</td>
+<td>0.1 s</td>
+<td>teleop keyboard / joystick</td>
+</tr>
+<tr>
+<td><code>cmd_vel_behavior</code></td>
+<td>8</td>
+<td>0.3 s</td>
+<td><code>semantic_behavior</code>, <code>collision_assurance</code></td>
+</tr>
+<tr>
+<td><code>cmd_vel_rrt</code></td>
+<td>6</td>
+<td>0.5 s</td>
+<td><code>rrt_star_planner</code></td>
+</tr>
+<tr>
+<td><code>cmd_vel_lane</code></td>
+<td>5</td>
+<td>0.3 s</td>
+<td>lane follower (legacy Twist)</td>
+</tr>
+<tr>
+<td><code>cmd_vel_vision</code></td>
+<td>4</td>
+<td>0.5 s</td>
+<td>classical vision trackers</td>
+</tr>
+<tr>
+<td><code>cmd_vel_nav_steer</code></td>
+<td>3</td>
+<td>0.5 s</td>
+<td>Nav2 controller (after steering adapter)</td>
+</tr>
+</tbody>
+</table>
+<p>The lane follower also publishes <code>drive_lane</code> (<code>AckermannDriveStamped</code>) as the
+clean semantic control interface. The existing <code>twist_mux</code> chain still consumes
+<code>cmd_vel_lane</code> for compatibility with the downstream serial bridge.</p>
+<h3 id="53-safety-characteristics-in-command-plane">5.3 Safety characteristics in command plane<a class="headerlink" href="#53-safety-characteristics-in-command-plane" title="Permanent link">&para;</a></h3>
+<ul>
+<li>All autonomy nodes default to <strong><code>start=false</code></strong> where motion is possible.</li>
+<li>Teleop nodes publish explicit zero <code>Twist</code> when inactive/shutdown.</li>
+<li>Serial node applies <code>command_timeout_sec</code> (default <code>1.0</code>) and transmits zero command when stale.</li>
+</ul>
+<pre class="mermaid"><code>stateDiagram-v2
+  [*] --&gt; Idle
+  Idle --&gt; TeleopActive: cmd_vel_teleop alive
+  Idle --&gt; BehaviorStop: cmd_vel_behavior alive
+  Idle --&gt; LaneActive: cmd_vel_lane alive
+  Idle --&gt; VisionActive: cmd_vel_vision alive
+  Idle --&gt; NavActive: cmd_vel_nav_steer alive
+
+  NavActive --&gt; BehaviorStop: behavior topic appears
+  NavActive --&gt; TeleopActive: teleop topic appears
+  VisionActive --&gt; LaneActive: lane topic appears
+  LaneActive --&gt; BehaviorStop: behavior topic appears
+  LaneActive --&gt; TeleopActive: teleop topic appears
+  BehaviorStop --&gt; TeleopActive: teleop topic appears
+
+  TeleopActive --&gt; Idle: timeout/no messages
+  BehaviorStop --&gt; Idle: timeout/no messages
+  LaneActive --&gt; Idle: timeout/no messages
+  VisionActive --&gt; Idle: timeout/no messages
+  NavActive --&gt; Idle: timeout/no messages</code></pre>
+<h2 id="6-hardware-and-sensor-plane">6. Hardware and Sensor Plane<a class="headerlink" href="#6-hardware-and-sensor-plane" title="Permanent link">&para;</a></h2>
+<h2 id="61-jetracer_serial_node-responsibilities">6.1 <code>jetracer_serial_node</code> responsibilities<a class="headerlink" href="#61-jetracer_serial_node-responsibilities" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Opens serial port (<code>/dev/ttyACM0</code> default) and configures UART.</li>
+<li>Publishes:</li>
+<li><code>/imu</code></li>
+<li><code>/odom_raw</code></li>
+<li><code>/motor/lvel</code>, <code>/motor/rvel</code>, <code>/motor/lset</code>, <code>/motor/rset</code></li>
+<li>Subscribes:</li>
+<li><code>/cmd_vel</code></li>
+<li>Sends three frame types to MCU:</li>
+<li>velocity command frame</li>
+<li>PID/linear/servo parameter frame</li>
+<li>coefficient frame</li>
+<li>Parses incoming frames using a byte-wise state machine and checksum guard.</li>
+<li>Optionally publishes <code>odom -&gt; base_footprint</code> TF (<code>publish_odom_transform</code>, default false).</li>
+</ul>
+<pre class="mermaid"><code>sequenceDiagram
+  participant MUX as twist_mux
+  participant MCU as jetracer_serial_node
+  participant RP as RP2040 MCU
+  participant EKF as robot_localization
+
+  MUX-&gt;&gt;MCU: /cmd_vel
+  MCU-&gt;&gt;RP: velocity frame (0x11)
+  MCU-&gt;&gt;RP: params frame (0x12) on update
+  MCU-&gt;&gt;RP: coeff frame (0x13) on update
+  RP--&gt;&gt;MCU: telemetry frame (imu/odom/motor data)
+  MCU-&gt;&gt;EKF: /imu + /odom_raw
+  MCU-&gt;&gt;MUX: motor telemetry topics</code></pre>
+<h2 id="62-lidar-and-filtering">6.2 LiDAR and filtering<a class="headerlink" href="#62-lidar-and-filtering" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>rplidar_ros/rplidar_node</code> publishes <code>/scan</code> (<code>jetracer_hardware/launch/lidar.launch.py</code>).</li>
+<li>Optional <code>laser_filter.py</code> converts <code>/scan</code> to <code>/filteredscan</code> via:</li>
+<li>distance truncation</li>
+<li>angle-window masking (<code>laser_angle</code>).</li>
+</ul>
+<h2 id="63-calibration-helper">6.3 Calibration helper<a class="headerlink" href="#63-calibration-helper" title="Permanent link">&para;</a></h2>
+<p><code>calibrate_linear.py</code>:</p>
+<ul>
+<li>uses TF (<code>odom_frame</code> to <code>base_frame</code>) to measure traveled distance</li>
+<li>commands <code>/cmd_vel</code> until test-distance error is within tolerance</li>
+<li>can be started/stopped dynamically via <code>start_test</code>.</li>
+</ul>
+<h2 id="7-localization-and-tf-plane">7. Localization and TF Plane<a class="headerlink" href="#7-localization-and-tf-plane" title="Permanent link">&para;</a></h2>
+<h2 id="71-ekf-fusion-robot_localization">7.1 EKF fusion (<code>robot_localization</code>)<a class="headerlink" href="#71-ekf-fusion-robot_localization" title="Permanent link">&para;</a></h2>
+<p><code>jetracer_localization/config/ekf.yaml</code> fuses:</p>
+<ul>
+<li><code>odom0: /odom_raw</code></li>
+<li><code>imu0: /imu</code></li>
+</ul>
+<p>Key design choices:</p>
+<ul>
+<li><code>two_d_mode: true</code></li>
+<li><code>world_frame: odom</code></li>
+<li>EKF output remapped <code>odometry/filtered -&gt; /odom</code></li>
+<li>IMU fusion is restricted to yaw-orientation/yaw-rate channels to avoid contaminating EKF with pre-fused acceleration from MCU AHRS.</li>
+</ul>
+<h2 id="72-tf-frame-hierarchy">7.2 TF frame hierarchy<a class="headerlink" href="#72-tf-frame-hierarchy" title="Permanent link">&para;</a></h2>
+<p>Static/kinematic frames come from URDF (<code>jetracer.urdf.xacro</code>) through <code>robot_state_publisher</code>:</p>
+<ul>
+<li><code>base_footprint</code></li>
+<li><code>base_link</code><ul>
+<li>steering/wheel joints</li>
+<li><code>camera_link</code></li>
+<li><code>imu_link</code></li>
+<li><code>laser_link</code></li>
+<li><code>jetson_link</code></li>
+</ul>
+</li>
+</ul>
+<p>Dynamic frames:</p>
+<ul>
+<li><code>odom -&gt; base_footprint</code>: typically from EKF.</li>
+<li><code>map -&gt; odom</code>: from AMCL (nav mode) or SLAM backend (mapping modes).</li>
+</ul>
+<pre class="mermaid"><code>flowchart TD
+  MAP[map]
+  ODOM[odom]
+  BF[base_footprint]
+  BLK[base_link]
+  CAM[camera_link]
+  IMU[imu_link]
+  LASER[laser_link]
+  JET[jetson_link]
+  FL[front_left_wheel_link]
+  FR[front_right_wheel_link]
+  RL[rear_left_wheel_link]
+  RR[rear_right_wheel_link]
+
+  MAP --&gt; ODOM
+  ODOM --&gt; BF
+  BF --&gt; BLK
+  BLK --&gt; CAM
+  BLK --&gt; IMU
+  BLK --&gt; LASER
+  BLK --&gt; JET
+  BLK --&gt; FL
+  BLK --&gt; FR
+  BLK --&gt; RL
+  BLK --&gt; RR</code></pre>
+<h2 id="8-perception-and-behavior-plane">8. Perception and Behavior Plane<a class="headerlink" href="#8-perception-and-behavior-plane" title="Permanent link">&para;</a></h2>
+<h2 id="81-camera-ingest">8.1 Camera ingest<a class="headerlink" href="#81-camera-ingest" title="Permanent link">&para;</a></h2>
+<p><code>jetracer_perception/launch/csi_camera.launch.py</code> starts <code>gscam_node</code>:</p>
+<ul>
+<li>namespace default: <code>csi_cam_0</code></li>
+<li>topic path includes <code>image_raw</code> (+ camera info)</li>
+<li>Jetson-oriented GStreamer pipeline defaults via <code>nvarguscamerasrc</code>.</li>
+<li>launch arguments expose capture width, height, FPS, flip method, and calibration file URL.</li>
+</ul>
+<h2 id="82-lane-following-pipeline-high-definition-autonomy">8.2 Lane-following pipeline (High-Definition Autonomy)<a class="headerlink" href="#82-lane-following-pipeline-high-definition-autonomy" title="Permanent link">&para;</a></h2>
+<p><code>lane_following_node.py</code> executes per camera frame using a <strong>MultiThreadedExecutor</strong> to isolate high-intensity CV tasks from odometry parsing:</p>
+<ol>
+<li>compressed image decode</li>
+<li>optional frame rectification from <code>CameraInfo</code></li>
+<li>resize to <strong>320x240</strong> (High-Definition space)</li>
+<li><strong>Perspective Warp:</strong> transform to Bird's-Eye View (BEV)</li>
+<li><strong>Luminance Thresholding:</strong> isolate white tape on black ground</li>
+<li><strong>Sliding Window Polynomial Fit:</strong> fit 2nd-degree parabolas to detected pixels</li>
+<li>keep the solved centerline in BEV and convert it to a pseudo-metric vehicle frame</li>
+<li>project the same centerline back to camera space only for debug overlays</li>
+<li>selectable lateral control (<code>stanley</code> or <code>mpc</code>) + PID longitudinal control</li>
+<li>publish <code>drive_lane</code>, legacy <code>cmd_vel_lane</code>, metric waypoints, and debug image</li>
+</ol>
+<p>Inputs:</p>
+<ul>
+<li>image: configurable compressed topic (default <code>csi_cam_0/image_raw/compressed</code>)</li>
+<li>calibration: <code>csi_cam_0/camera_info</code></li>
+<li>odometry: <code>/odom</code></li>
+</ul>
+<p>Outputs:</p>
+<ul>
+<li><code>drive_lane</code> (<code>AckermannDriveStamped</code>) — primary Ackermann command</li>
+<li><code>cmd_vel_lane</code> (<code>Twist</code>) — legacy compatibility for <code>twist_mux</code></li>
+<li><code>lane_following/waypoints</code> (<code>Float32MultiArray</code>) — vehicle-frame waypoints (m)</li>
+<li><code>lane_following/waypoints_camera</code> (<code>Float32MultiArray</code>) — camera-space overlay points</li>
+<li><code>lane_following/path</code> (<code>nav_msgs/Path</code>) — planned centerline for RViz2</li>
+<li><code>lane_following/markers</code> (<code>visualization_msgs/MarkerArray</code>) — lookahead sphere, steering arrow, status cube</li>
+<li><code>lane_following/status</code> (<code>String</code>) — <code>GOOD</code> / <code>WEAK</code> / <code>LOST</code></li>
+<li><code>lane_following/confidence</code> (<code>Float32</code>) — tracking confidence 0–1</li>
+<li><code>lane_following/control_fps</code> (<code>Float32</code>) — control loop rate</li>
+<li><code>lane_following/frame_age_sec</code> (<code>Float32</code>) — camera frame latency</li>
+<li><code>lane_following/debug_image/compressed</code> (<code>CompressedImage</code>) — gated at <code>debug_fps_limit</code> Hz</li>
+</ul>
+<p>Key parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>start</code></td>
+<td><code>false</code></td>
+<td>Safety gate — must be set <code>true</code> to move</td>
+</tr>
+<tr>
+<td><code>lateral_controller_type</code></td>
+<td><code>stanley</code></td>
+<td><code>stanley</code> or <code>mpc</code></td>
+</tr>
+<tr>
+<td><code>max_speed_ms</code></td>
+<td><code>0.35</code></td>
+<td>Maximum forward speed (m/s)</td>
+</tr>
+<tr>
+<td><code>enable_markers</code></td>
+<td><code>true</code></td>
+<td>Publish RViz2 markers (disable on Jetson to save CPU)</td>
+</tr>
+<tr>
+<td><code>debug_fps_limit</code></td>
+<td><code>5.0</code></td>
+<td>Max Hz for debug image (bandwidth control)</td>
+</tr>
+<tr>
+<td><code>max_frame_age_sec</code></td>
+<td><code>0.20</code></td>
+<td>Skip control if camera frame is older than this</td>
+</tr>
+</tbody>
+</table>
+<pre class="mermaid"><code>flowchart LR
+  IMG[csi_cam_0/image_raw/compressed] --&gt; DEC[cv_bridge decode]
+  INFO[csi_cam_0/camera_info] --&gt; RECT[Undistort/Rectify]
+  DEC --&gt; RECT
+  RECT --&gt; RSZ[Resize 320x240]
+  RSZ --&gt; WARP[Perspective Warp]
+  WARP --&gt; LUM[Luminance Threshold]
+  LUM --&gt; HIST[Histogram Sliding Window]
+  HIST --&gt; POLY[Parabolic Fit]
+  POLY --&gt; BEV[Centerline in BEV]
+  BEV --&gt; VF[Vehicle-frame waypoints]
+  BEV --&gt; UNWARP[Inverse Perspective Warp]
+  UNWARP --&gt; CAMWP[Camera-space waypoints]
+  VF --&gt; CURV[TargetSpeedFromCurvature]
+  VF --&gt; ST[Lateral Controller Selector]
+  ODOM["/odom"] --&gt; PID[PID Longitudinal]
+  CURV --&gt; PID
+  ST --&gt; ACK[drive_lane]
+  PID --&gt; ACK
+  ST --&gt; TW[cmd_vel_lane legacy]
+  PID --&gt; TW
+  VF --&gt; DBG1[lane_following/waypoints]
+  CAMWP --&gt; DBG2[lane_following/waypoints_camera]
+  CAMWP --&gt; DBG3[lane_following/debug_image/compressed]</code></pre>
+<pre class="mermaid"><code>flowchart TD
+  CFG[lateral_controller_type param]
+  WP2[Vehicle-frame waypoints]
+  ODO2["/odom speed"]
+
+  CFG --&gt; SEL{stanley or mpc}
+  WP2 --&gt; SEL
+  ODO2 --&gt; SEL
+
+  SEL --&gt;|stanley| STAN[Stanley law\nlookahead + smoothing]
+  SEL --&gt;|mpc| MPC[Linear MPC horizon solve\nQ/R tuning]
+
+  STAN --&gt; OUT[steering angle in rad]
+  MPC --&gt; OUT
+  OUT --&gt; ACK2[drive.steering_angle]
+  OUT --&gt; TW2[legacy Twist angular.z = steering angle]</code></pre>
+<h2 id="83-classical-vision-behaviors">8.3 Classical vision behaviors<a class="headerlink" href="#83-classical-vision-behaviors" title="Permanent link">&para;</a></h2>
+<p>Nodes publishing <code>cmd_vel_vision</code>:</p>
+<ul>
+<li><code>color_tracking.py</code></li>
+<li><code>object_tracking.py</code></li>
+<li><code>face_detect.py</code></li>
+</ul>
+<p>Shared pattern:</p>
+<ul>
+<li>compressed image subscribe (queue depth 1)</li>
+<li>start-gated motion output</li>
+<li>annotated debug image publish</li>
+</ul>
+<p>Additional outputs:</p>
+<ul>
+<li><code>face_detect/count</code> (int)</li>
+<li><code>motion_detect/status</code> from <code>motion_detect.py</code> (non-driving detector).</li>
+</ul>
+<h2 id="84-yolo-semantic-detection">8.4 YOLO semantic detection<a class="headerlink" href="#84-yolo-semantic-detection" title="Permanent link">&para;</a></h2>
+<p><code>yolo_detection.py</code>:</p>
+<ul>
+<li>loads Ultralytics model from parameterized <code>model_path</code></li>
+<li>attempts configured device (default <code>cuda:0</code>) with CPU fallback on failures</li>
+<li>publishes:</li>
+<li><code>perception/yolo_detections</code> (<code>vision_msgs/Detection2DArray</code>)</li>
+<li>optional <code>perception/yolo_debug/compressed</code></li>
+</ul>
+<h2 id="85-behavior-override-nodes">8.5 Behavior override nodes<a class="headerlink" href="#85-behavior-override-nodes" title="Permanent link">&para;</a></h2>
+<p><code>semantic_behavior.py</code>:</p>
+<ul>
+<li>subscribes YOLO detections</li>
+<li>triggers stop if configured class (default <code>stop sign</code>) exceeds image-area threshold</li>
+<li>runs timed stop + cooldown state machine</li>
+<li>publishes zero commands on <code>cmd_vel_behavior</code> while active</li>
+</ul>
+<p><code>collision_assurance.py</code>:</p>
+<ul>
+<li>subscribes <code>/scan</code></li>
+<li>checks forward cone for obstacle under distance threshold</li>
+<li>publishes repeated zero commands on <code>cmd_vel_behavior</code> while blocked</li>
+</ul>
+<p>Both are priority-8 sources into <code>twist_mux</code>.</p>
+<pre class="mermaid"><code>flowchart TD
+  YOLO[perception/yolo_detections] --&gt; SB[semantic_behavior]
+  SCAN["/scan"] --&gt; CA[collision_assurance]
+  SB --&gt;|zero Twist when trigger active| BEHAV[cmd_vel_behavior]
+  CA --&gt;|zero Twist when blocked| BEHAV
+  BEHAV --&gt; MUX[twist_mux priority 8]
+  MUX --&gt; CMD["/cmd_vel"]</code></pre>
+<h2 id="9-navigation-slam-and-mission-plane">9. Navigation, SLAM, and Mission Plane<a class="headerlink" href="#9-navigation-slam-and-mission-plane" title="Permanent link">&para;</a></h2>
+<h2 id="91-nav2-map-based-mode">9.1 Nav2 (map-based mode)<a class="headerlink" href="#91-nav2-map-based-mode" title="Permanent link">&para;</a></h2>
+<p><code>jetracer_navigation/launch/nav.launch.py</code> starts:</p>
+<ul>
+<li><code>map_server</code></li>
+<li><code>amcl</code></li>
+<li><code>planner_server</code></li>
+<li><code>controller_server</code> (remapped <code>cmd_vel -&gt; cmd_vel_nav</code>)</li>
+<li><code>behavior_server</code></li>
+<li><code>bt_navigator</code></li>
+<li>lifecycle manager</li>
+<li>optional <code>multipoint_nav.py</code></li>
+</ul>
+<h2 id="92-plannercontroller-architecture">9.2 Planner/controller architecture<a class="headerlink" href="#92-plannercontroller-architecture" title="Permanent link">&para;</a></h2>
+<p>From <code>nav2_params.yaml</code>:</p>
+<ul>
+<li>Planner: <code>SmacPlannerHybrid</code> with <code>motion_model_for_search: ACKERMANN</code>.</li>
+<li>Controller: <code>RegulatedPurePursuitController</code>.</li>
+<li>AMCL model forced to <code>OmniMotionModel</code> as practical approximation for car-like platform.</li>
+<li>Footprint set to chassis-like polygon for both local/global costmaps.</li>
+</ul>
+<h2 id="93-slam-backends">9.3 SLAM backends<a class="headerlink" href="#93-slam-backends" title="Permanent link">&para;</a></h2>
+<p><code>slam.launch.py</code> supports:</p>
+<ul>
+<li><code>slam_toolbox</code> (managed lifecycle node + lifecycle manager)</li>
+<li><code>cartographer_ros</code> (node + occupancy grid node using <code>config/cartographer/jetracer.lua</code>)</li>
+</ul>
+<p><code>slam_nav.launch.py</code> composes SLAM + Nav2 controller/planner/bt stack for online mapping navigation.</p>
+<h2 id="94-multipoint-mission-runner">9.4 Multipoint mission runner<a class="headerlink" href="#94-multipoint-mission-runner" title="Permanent link">&para;</a></h2>
+<p><code>multipoint_nav.py</code>:</p>
+<ul>
+<li>consumes RViz <code>/clicked_point</code></li>
+<li>drives sequential <code>NavigateToPose</code> goals via action client</li>
+<li>supports looping and single retry of failed goals</li>
+<li>publishes indexed marker labels for waypoint visualization</li>
+<li>resets patrol list on <code>initialpose</code> updates (optional forwarding to alternate topic).</li>
+</ul>
+<pre class="mermaid"><code>flowchart LR
+  CP[clicked_point] --&gt; MP[multipoint_nav.py]
+  IP[initialpose] --&gt; MP
+  MP --&gt; MK[path_point MarkerArray]
+  MP --&gt; ACT[Nav2 NavigateToPose Action]
+  ACT --&gt; CTRL[controller_server]
+  CTRL --&gt;|cmd_vel_nav| ADP[cmd_vel_to_steering]
+  ADP --&gt;|cmd_vel_nav_steer| MUX[twist_mux]
+  MUX --&gt; CMD["/cmd_vel"]</code></pre>
+<hr />
+<pre class="mermaid"><code>flowchart TD
+  SL[slam.launch.py]
+  ST[slam_toolbox async node]
+  LM[lifecycle_manager_slam]
+  CT[cartographer_node]
+  CG[cartographer_occupancy_grid_node]
+
+  SL --&gt;|slam_backend=slam_toolbox| ST
+  SL --&gt;|slam_backend=slam_toolbox| LM
+  SL --&gt;|slam_backend=cartographer| CT
+  SL --&gt;|slam_backend=cartographer| CG</code></pre>
+<h2 id="10-voice-and-human-io-plane">10. Voice and Human I/O Plane<a class="headerlink" href="#10-voice-and-human-io-plane" title="Permanent link">&para;</a></h2>
+<h2 id="101-teleop">10.1 Teleop<a class="headerlink" href="#101-teleop" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>teleop_joy.py</code>: deadman-button gated joystick to <code>cmd_vel_teleop</code>, timer-based publish loop.</li>
+<li><code>teleop_key.py</code>: terminal keyboard control to <code>cmd_vel_teleop</code>, with speed scaling bindings.</li>
+</ul>
+<h2 id="102-voice-stack">10.2 Voice stack<a class="headerlink" href="#102-voice-stack" title="Permanent link">&para;</a></h2>
+<p><code>vad.py</code> is a mode-driven orchestrator:</p>
+<ul>
+<li>records VAD-gated utterances to runtime files</li>
+<li>routes to helper scripts (<code>ginput.py</code>, <code>iat.py</code>, <code>aiui.py</code>) based on mode</li>
+<li>publishes recognized text on <code>chatter</code></li>
+<li>optionally plays assistant/TTS audio outputs</li>
+</ul>
+<p>TTS subscribers:</p>
+<ul>
+<li><code>tts_en.py</code> subscribes <code>speak</code> (gTTS)</li>
+<li><code>tts_cn.py</code> subscribes <code>speak</code> (XFYun WebSocket API)</li>
+</ul>
+<p>Offline command navigation:</p>
+<ul>
+<li><code>voice_commander.py</code> uses Vosk+PyAudio and publishes <code>/goal_pose</code> when keywords are matched.</li>
+</ul>
+<p>Credential strategy:</p>
+<ul>
+<li>API secrets are parameterized (not hardcoded).</li>
+<li>Runtime artifacts are written under <code>~/.ros/jetracer_voice</code> by default.</li>
+</ul>
+<pre class="mermaid"><code>stateDiagram-v2
+  [*] --&gt; Record
+  Record --&gt; Play: mode=play
+  Record --&gt; ASR_EN: mode=asr_en
+  Record --&gt; TALK_EN: mode=talk_en
+  Record --&gt; ASR_CN: mode=asr_cn
+  Record --&gt; TALK_CN: mode=talk_cn
+
+  ASR_EN --&gt; PublishText
+  TALK_EN --&gt; PublishText
+  TALK_EN --&gt; PlayAssistantAudio
+  ASR_CN --&gt; PublishText
+  TALK_CN --&gt; PublishText
+  TALK_CN --&gt; PlayTTS_CN
+
+  Play --&gt; Record
+  PublishText --&gt; Record
+  PlayAssistantAudio --&gt; Record
+  PlayTTS_CN --&gt; Record</code></pre>
+<h2 id="11-topic-contract-reference-key-runtime-interfaces">11. Topic Contract Reference (Key Runtime Interfaces)<a class="headerlink" href="#11-topic-contract-reference-key-runtime-interfaces" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Type</th>
+<th>Producer(s)</th>
+<th>Consumer(s)</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/cmd_vel</code></td>
+<td><code>geometry_msgs/Twist</code></td>
+<td><code>twist_mux</code></td>
+<td><code>jetracer_serial_node</code></td>
+<td>final actuator command</td>
+</tr>
+<tr>
+<td><code>cmd_vel_safety</code></td>
+<td><code>Twist</code></td>
+<td><code>safety_supervisor</code></td>
+<td><code>twist_mux</code></td>
+<td>priority 255 halt</td>
+</tr>
+<tr>
+<td><code>cmd_vel_teleop</code></td>
+<td><code>Twist</code></td>
+<td>teleop nodes</td>
+<td><code>twist_mux</code></td>
+<td>highest manual priority</td>
+</tr>
+<tr>
+<td><code>cmd_vel_behavior</code></td>
+<td><code>Twist</code></td>
+<td>behavior nodes</td>
+<td><code>twist_mux</code></td>
+<td>emergency semantic/LiDAR stops</td>
+</tr>
+<tr>
+<td><code>drive_lane</code></td>
+<td><code>AckermannDriveStamped</code></td>
+<td>lane follower</td>
+<td>optional direct consumers</td>
+<td>primary lane-control command</td>
+</tr>
+<tr>
+<td><code>cmd_vel_lane</code></td>
+<td><code>Twist</code></td>
+<td>lane follower</td>
+<td><code>twist_mux</code></td>
+<td>legacy steering-angle compatibility</td>
+</tr>
+<tr>
+<td><code>cmd_vel_vision</code></td>
+<td><code>Twist</code></td>
+<td>classical vision trackers</td>
+<td><code>twist_mux</code></td>
+<td>perception-driven tracking</td>
+</tr>
+<tr>
+<td><code>cmd_vel_nav</code></td>
+<td><code>Twist</code></td>
+<td>Nav2 controller_server</td>
+<td><code>cmd_vel_to_steering</code></td>
+<td>pre-adaptation Nav2 command</td>
+</tr>
+<tr>
+<td><code>cmd_vel_nav_steer</code></td>
+<td><code>Twist</code></td>
+<td><code>cmd_vel_to_steering</code></td>
+<td><code>twist_mux</code></td>
+<td>adapted Nav2 command</td>
+</tr>
+<tr>
+<td><code>/imu</code></td>
+<td><code>sensor_msgs/Imu</code></td>
+<td>serial node</td>
+<td>EKF, safety_supervisor</td>
+<td>MCU-origin IMU</td>
+</tr>
+<tr>
+<td><code>/imu/data</code></td>
+<td><code>sensor_msgs/Imu</code></td>
+<td>simulation bridge</td>
+<td>EKF, safety_supervisor</td>
+<td>sim IMU</td>
+</tr>
+<tr>
+<td><code>/odom_raw</code></td>
+<td><code>nav_msgs/Odometry</code></td>
+<td>serial node</td>
+<td>EKF</td>
+<td>raw odom</td>
+</tr>
+<tr>
+<td><code>/odom</code></td>
+<td><code>nav_msgs/Odometry</code></td>
+<td>EKF</td>
+<td>Nav2 + lane follower</td>
+<td>canonical odometry</td>
+</tr>
+<tr>
+<td><code>/scan</code></td>
+<td><code>sensor_msgs/LaserScan</code></td>
+<td><code>rplidar_node</code> or sim bridge</td>
+<td>Nav2, collision assurance</td>
+<td>primary LiDAR feed</td>
+</tr>
+<tr>
+<td><code>/filteredscan</code></td>
+<td><code>LaserScan</code></td>
+<td>laser_filter</td>
+<td>optional consumers</td>
+<td>only when filter launch is used</td>
+</tr>
+<tr>
+<td><code>csi_cam_0/image_raw/compressed</code></td>
+<td><code>sensor_msgs/CompressedImage</code></td>
+<td>camera pipeline or sim</td>
+<td>perception/lane nodes</td>
+<td>default camera stream</td>
+</tr>
+<tr>
+<td><code>csi_cam_0/camera_info</code></td>
+<td><code>sensor_msgs/CameraInfo</code></td>
+<td>camera pipeline or sim</td>
+<td>lane follower</td>
+<td>calibration data</td>
+</tr>
+<tr>
+<td><code>lane_following/path</code></td>
+<td><code>nav_msgs/Path</code></td>
+<td>lane follower</td>
+<td>RViz2</td>
+<td>planned centerline in base_link</td>
+</tr>
+<tr>
+<td><code>lane_following/markers</code></td>
+<td><code>visualization_msgs/MarkerArray</code></td>
+<td>lane follower</td>
+<td>RViz2</td>
+<td>lookahead pt, steering arrow, status cube</td>
+</tr>
+<tr>
+<td><code>lane_following/status</code></td>
+<td><code>std_msgs/String</code></td>
+<td>lane follower</td>
+<td>debug tools</td>
+<td><code>GOOD</code>/<code>WEAK</code>/<code>LOST</code></td>
+</tr>
+<tr>
+<td><code>lane_following/confidence</code></td>
+<td><code>std_msgs/Float32</code></td>
+<td>lane follower</td>
+<td>debug tools</td>
+<td>0–1 tracking confidence</td>
+</tr>
+<tr>
+<td><code>lane_following/control_fps</code></td>
+<td><code>std_msgs/Float32</code></td>
+<td>lane follower</td>
+<td>debug tools</td>
+<td>control loop rate</td>
+</tr>
+<tr>
+<td><code>lane_following/frame_age_sec</code></td>
+<td><code>std_msgs/Float32</code></td>
+<td>lane follower</td>
+<td>debug tools</td>
+<td>camera frame latency</td>
+</tr>
+<tr>
+<td><code>lane_following/waypoints</code></td>
+<td><code>Float32MultiArray</code></td>
+<td>lane follower</td>
+<td>debug/tuning tools</td>
+<td>vehicle-frame waypoints (m)</td>
+</tr>
+<tr>
+<td><code>lane_following/waypoints_camera</code></td>
+<td><code>Float32MultiArray</code></td>
+<td>lane follower</td>
+<td>debug/tuning tools</td>
+<td>camera-space overlay points</td>
+</tr>
+<tr>
+<td><code>perception/yolo_detections</code></td>
+<td><code>vision_msgs/Detection2DArray</code></td>
+<td>YOLO node</td>
+<td>semantic behavior</td>
+<td>semantic signal</td>
+</tr>
+<tr>
+<td><code>battery_state</code></td>
+<td><code>sensor_msgs/BatteryState</code></td>
+<td>serial node</td>
+<td>safety_supervisor</td>
+<td>battery voltage</td>
+</tr>
+<tr>
+<td><code>/control/slipping</code></td>
+<td><code>std_msgs/Bool</code></td>
+<td>slip_monitor</td>
+<td>safety_supervisor</td>
+<td>wheel slip flag</td>
+</tr>
+<tr>
+<td><code>/control/collision_blocked</code></td>
+<td><code>std_msgs/Bool</code></td>
+<td>collision_assurance</td>
+<td>safety_supervisor</td>
+<td>LiDAR blocked flag</td>
+</tr>
+<tr>
+<td><code>/diagnostics</code></td>
+<td><code>diagnostic_msgs/DiagnosticArray</code></td>
+<td>serial node, thermal_monitor</td>
+<td>safety_supervisor</td>
+<td>system health</td>
+</tr>
+<tr>
+<td><code>/goal_pose</code></td>
+<td><code>geometry_msgs/PoseStamped</code></td>
+<td>voice commander / RViz</td>
+<td>Nav2 BT navigator</td>
+<td>goal API topic</td>
+</tr>
+<tr>
+<td><code>clicked_point</code></td>
+<td><code>geometry_msgs/PointStamped</code></td>
+<td>RViz tool</td>
+<td>multipoint_nav</td>
+<td>mission waypoint input</td>
+</tr>
+</tbody>
+</table>
+<h2 id="12-parameter-and-configuration-layering">12. Parameter and Configuration Layering<a class="headerlink" href="#12-parameter-and-configuration-layering" title="Permanent link">&para;</a></h2>
+<h2 id="121-central-config">12.1 Central config<a class="headerlink" href="#121-central-config" title="Permanent link">&para;</a></h2>
+<p><code>src/jetracer_bringup/config/main_config.yaml</code> provides shared runtime tuning for:</p>
+<ul>
+<li>lane following</li>
+<li>YOLO detection</li>
+<li>semantic behavior</li>
+<li>collision assurance</li>
+<li>nav command adapter</li>
+<li>foxglove bridge</li>
+<li>multipoint navigation</li>
+<li>voice commander (parameter block available)</li>
+</ul>
+<h2 id="122-domain-configs">12.2 Domain configs<a class="headerlink" href="#122-domain-configs" title="Permanent link">&para;</a></h2>
+<ul>
+<li>hardware: <code>jetracer_hardware/config/hardware.yaml</code></li>
+<li>EKF: <code>jetracer_localization/config/ekf.yaml</code></li>
+<li>Nav2: <code>jetracer_navigation/config/nav2_params.yaml</code></li>
+<li>multipoint nav: <code>jetracer_navigation/config/multipoint_nav.yaml</code></li>
+<li>SLAM toolbox: <code>jetracer_navigation/config/slam_toolbox_online.yaml</code></li>
+<li>camera calibration: <code>jetracer_perception/config/cam_640x480.yaml</code></li>
+</ul>
+<h2 id="123-effective-precedence">12.3 Effective precedence<a class="headerlink" href="#123-effective-precedence" title="Permanent link">&para;</a></h2>
+<ol>
+<li>node-declared defaults in code  </li>
+<li>YAML passed via launch  </li>
+<li>explicit launch-argument parameter overrides  </li>
+<li>runtime dynamic parameter updates (where callbacks are implemented)</li>
+</ol>
+<h2 id="13-safety-and-fault-tolerance-summary">13. Safety and Fault-Tolerance Summary<a class="headerlink" href="#13-safety-and-fault-tolerance-summary" title="Permanent link">&para;</a></h2>
+<h3 id="131-safety_supervisor-priority-255">13.1 <code>safety_supervisor</code> (priority 255)<a class="headerlink" href="#131-safety_supervisor-priority-255" title="Permanent link">&para;</a></h3>
+<p><code>jetracer_behavior/jetracer_behavior/safety_supervisor.py</code> sits at the top of
+the <code>twist_mux</code> hierarchy (priority 255, timeout 0.2 s) and publishes halt
+commands on <code>cmd_vel_safety</code> when any fault is active.</p>
+<p>Fault sources monitored:</p>
+<table>
+<thead>
+<tr>
+<th>Fault key</th>
+<th>Input topic</th>
+<th>Type</th>
+<th>Trigger</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>battery_low</code></td>
+<td><code>battery_state</code></td>
+<td><code>sensor_msgs/BatteryState</code></td>
+<td>voltage &lt; <code>min_voltage</code> (9.5 V)</td>
+</tr>
+<tr>
+<td><code>thermal_critical</code></td>
+<td><code>/diagnostics</code></td>
+<td><code>diagnostic_msgs/DiagnosticArray</code></td>
+<td>any zone &gt; <code>max_temp</code> (82 °C)</td>
+</tr>
+<tr>
+<td><code>hardware_failed</code></td>
+<td><code>/diagnostics</code></td>
+<td><code>DiagnosticArray</code></td>
+<td>serial node diagnostic ERROR</td>
+</tr>
+<tr>
+<td><code>slipping</code></td>
+<td><code>/control/slipping</code></td>
+<td><code>std_msgs/Bool</code></td>
+<td>wheel slip detected</td>
+</tr>
+<tr>
+<td><code>collision_blocked</code></td>
+<td><code>/control/collision_blocked</code></td>
+<td><code>Bool</code></td>
+<td>LiDAR forward cone blocked</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Fail-safe watchdog</strong>: if any monitored input goes silent for <code>input_timeout_sec</code>
+(default 2.0 s), the corresponding fault activates automatically. This prevents
+silent feed failures from leaving the vehicle unprotected.</p>
+<p><strong>Teleop awareness</strong>: when a human is on the joystick (<code>cmd_vel_teleop</code> active),
+battery and thermal soft-faults are suppressed so the operator retains authority.
+Hard faults (hardware failure, collision) override even teleop.</p>
+<p><strong>Clean shutdown</strong>: publishes three zero-velocity frames before node exit.</p>
+<h3 id="132-thermal_monitor">13.2 <code>thermal_monitor</code><a class="headerlink" href="#132-thermal_monitor" title="Permanent link">&para;</a></h3>
+<p><code>jetracer_hardware/scripts/thermal_monitor.py</code> enumerates all Linux thermal
+zones via sysfs (<code>/sys/class/thermal/thermal_zone*</code>) and reports GPU, PLL, AO,
+and CPU temperatures to <code>/diagnostics</code>. Also publishes CPU usage from <code>/proc/stat</code>.</p>
+<h3 id="133-slip_monitor">13.3 <code>slip_monitor</code><a class="headerlink" href="#133-slip_monitor" title="Permanent link">&para;</a></h3>
+<p><code>jetracer_behavior/jetracer_behavior/slip_monitor.py</code> compares commanded velocity
+with odometry-reported velocity to detect wheel slip. Publishes <code>/control/slipping</code>.</p>
+<h3 id="134-hardware-driver-safety">13.4 Hardware driver safety<a class="headerlink" href="#134-hardware-driver-safety" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Dry-run mode</strong> (<code>dry_run:=true</code>): suppresses all physical serial writes.</li>
+<li><strong>Acceleration ramp</strong> (<code>max_accel_mps2</code>): prevents sudden velocity jumps.</li>
+<li><strong>Startup guardrail</strong> (<code>startup_speed_limit_ms</code>): caps speed for 30 s after boot.</li>
+<li><strong>Serial reconnect</strong>: automatically re-opens the port after USB disconnect.</li>
+<li><strong>Command timeout</strong>: serial node zeroes commands after <code>command_timeout_sec</code> silence.</li>
+</ul>
+<h3 id="135-summary">13.5 Summary<a class="headerlink" href="#135-summary" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Motion gating: <code>start=false</code> by default for all autonomous nodes.</li>
+<li>Priority override: behavior/safety nodes can forcibly halt at higher mux priority.</li>
+<li>Explicit stop-on-exit: driving nodes publish zero command in <code>finally</code> blocks.</li>
+<li>Lifecycle enforcement: SLAM managed node is explicitly lifecycle-managed.</li>
+</ul>
+<h2 id="14-known-architectural-caveats">14. Known Architectural Caveats<a class="headerlink" href="#14-known-architectural-caveats" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>autonomy.launch.py</code> starts AI perception/behavior nodes but does <strong>not</strong> include base hardware/mux stack by default when <code>start_base:=false</code>; it is typically used as an overlay profile on top of <code>jetracer.launch.py</code>.</li>
+<li><code>laser_filter.py</code> publishes <code>filteredscan</code>, while default Nav2 and behavior wiring consume <code>scan</code>; filtered data is opt-in and requires explicit remap/use.</li>
+<li><code>odom_pose_to_odometry.py</code> exists for compatibility, but is intentionally not installed in ROS 2 packaging to avoid duplicate <code>/odom</code> publishers when EKF is active.</li>
+<li><code>main_config.yaml</code> contains <code>voice_commander</code> parameters, but no top-level bringup launch currently instantiates <code>voice_commander.py</code>.</li>
+<li>In <code>jetracer_serial_node</code>, updating <code>send_period_sec</code> via dynamic parameters updates the variable but does not recreate the already-created send timer.</li>
+<li><code>jetracer_gazebo</code> simulation never starts <code>jetracer_hardware</code> to prevent accidental real motor commands when simulation and hardware share a <code>ROS_DOMAIN_ID</code>.</li>
+<li><code>enable_markers:=false</code> should be set in <code>main_config.yaml</code> for Jetson Nano deployments to avoid CPU overhead from RViz2 marker publishing during autonomous driving.</li>
+</ul>
+<h2 id="15-extension-guidelines">15. Extension Guidelines<a class="headerlink" href="#15-extension-guidelines" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Add new command-producing autonomy nodes by publishing a dedicated <code>cmd_vel_*</code> topic and adding it to <code>twist_mux.yaml</code> with explicit priority/timeout.</li>
+<li>Keep Nav2 output semantics isolated behind <code>cmd_vel_to_steering</code> so actuator path remains physically meaningful.</li>
+<li>Preserve single-source ownership of <code>/odom</code> and <code>odom-&gt;base_footprint</code> to avoid estimator/TF conflicts.</li>
+<li>For new perception modules, follow existing compressed-image I/O pattern and low queue depths to reduce latency.</li>
+<li>For new cloud/voice integrations, continue parameterizing credentials and writing runtime artifacts outside source tree.</li>
+</ul>
+<hr />
+<blockquote>
+<p>[!TIP]
+Use this page as the implementation contract when adding new stack features. If a node changes topic semantics or priority behavior, update this document in the same PR.</p>
+</blockquote>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.instant", "toc.follow", "content.code.copy", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+      
+        <script src="../javascripts/mermaid-init.js"></script>
+      
+    
+  </body>
+</html>
