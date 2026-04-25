@@ -21,32 +21,31 @@
 twist_mux:
   ros__parameters:
     topics:
-      - name: safety
+      safety:
         topic: cmd_vel_safety
         timeout: 0.2
         priority: 255
-      - name: teleop
+      teleop:
         topic: cmd_vel_teleop
         timeout: 0.1
         priority: 10
-      - name: behavior
+      behavior:
         topic: cmd_vel_behavior
         timeout: 0.3
         priority: 8
-      - name: rrt_star
+      rrt_star:
         topic: cmd_vel_rrt
         timeout: 0.5
         priority: 6
-      - name: lane_following
+      lane_following:
         topic: cmd_vel_lane
         timeout: 0.3
         priority: 5
-      - name: vision
+      vision:
         topic: cmd_vel_vision
         timeout: 0.5
         priority: 4
-      - name: nav2
+      nav2:
         topic: cmd_vel_nav_steer
         timeout: 0.5
         priority: 3
-    locks: []

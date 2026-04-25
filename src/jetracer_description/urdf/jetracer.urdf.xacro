@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot name="jetracer" xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:property name="pi" value="3.1415926535897931"/>
+  <xacro:property name="half_pi" value="${xacro.pi / 2.0}"/>
 
   <xacro:property name="wheelbase" value="0.255"/>
   <xacro:property name="track_width" value="0.180"/>

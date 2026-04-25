@@ -28,7 +28,7 @@
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "std_msgs/msg/int32.hpp"
 #include "tf2/LinearMath/Quaternion.h"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_ros/transform_broadcaster.h"
 
 namespace
@@ -352,7 +352,7 @@ private:
 
     // Update Diagnostics
     if (diagnostic_updater_) {
-      diagnostic_updater_->update();
+      diagnostic_updater_->force_update();
     }
 
     {
@@ -649,7 +649,7 @@ private:
         brownout_warning_count_++;
       }
     } else if (min_voltage_at_peak < battery_derating_threshold_) {
-      health_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_WARM;
+      health_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_UNKNOWN;
       if (brownout_warning_count_ < 50) {
         RCLCPP_WARN(
           get_logger(),
@@ -658,7 +658,7 @@ private:
         brownout_warning_count_++;
       }
     } else if (voltage < battery_brownout_threshold_) {
-      health_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_WARM;
+      health_status = sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_UNKNOWN;
     }
 
     // Construct and publish BatteryState message
