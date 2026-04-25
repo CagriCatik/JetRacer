@@ -1,8 +1,9 @@
-# 07. Voice Commander Stack
+# 7. Voice Commander Stack
 
 The **`jetracer_voice`** package elevates the JetRacer platform into a fully interactive robotic agent, providing Natural Language actuation pathways completely offline.
 
 ## Why Offline?
+
 Many robot frameworks lazily employ cloud transcription APIs (e.g., Google STT or AWS). If your local Internet cuts out, your robot is paralyzed.
 
 Instead, we employ `Vosk`. Vosk utilizes tiny quantized acoustic and language models that execute locally on the Jetson Nano CPU, mapping raw incoming audio signals to phonemes and grammar graphs without ever broadcasting your local voice arrays externally.
@@ -10,7 +11,7 @@ Instead, we employ `Vosk`. Vosk utilizes tiny quantized acoustic and language mo
 ## Architecture
 
 ```mermaid
-graph LR
+graph TD
     subgraph Audio Frontend
       MIC[USB Microphone] -->|ALSA/PortAudio| DOCK[Docker /dev/snd]
       DOCK --> PY[PyAudio C-Binding Loop]

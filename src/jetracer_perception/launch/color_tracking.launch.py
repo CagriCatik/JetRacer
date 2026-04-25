@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -30,7 +31,7 @@ def generate_launch_description() -> LaunchDescription:
                 'v_min': LaunchConfiguration('v_min'),
                 'v_max': LaunchConfiguration('v_max'),
                 'linear_speed': LaunchConfiguration('linear_speed'),
-                'start': LaunchConfiguration('start'),
+                'start': ParameterValue(LaunchConfiguration('start'), value_type=bool),
             }],
         ),
     ])

@@ -9,13 +9,16 @@ The JetRacer ROS 2 stack is designed with **Dynamic Configuration** capability. 
 Depending on your environment, you can use any of the following tools to adjust the `/ros__parameters` of our nodes.
 
 ### 1. Foxglove Studio (Remote Web-based)
+
 **Recommended for the Jetson Nano** to minimize CPU overhead on the main machine.
+
 1. Connect Foxglove to the JetRacer (`ws://<IP>:8765`).
 2. Add the **Parameters** panel from the sidebar.
 3. Select a node (e.g., `/lane_following` or `/jetracer_hardware`).
 4. Adjust values directly; the node updates instantly.
 
 ### 2. ROS 2 CLI (Expert/Command Line)
+
 Useful for rapid scripting or when a GUI is not available.
 
 ```bash
@@ -30,6 +33,7 @@ ros2 param set /lane_following max_speed_ms 0.5
 ```
 
 ### 3. RQT Reconfigure (Standard GUI)
+
 Use this if you are running on a local desktop with X11 forwarding or if the Jetson is connected to a monitor.
 
 ```bash
@@ -41,6 +45,7 @@ ros2 run rqt_reconfigure rqt_reconfigure
 ## Tunable Parameter Reference
 
 ### 1. Lane Following (`/lane_following`)
+
 | Parameter | Default | Tuning Strategy |
 | :--- | :--- | :--- |
 | `start` | `false` | Set to `true` to begin motion. |
@@ -49,6 +54,7 @@ ros2 run rqt_reconfigure rqt_reconfigure
 | `lateral_controller_type` | `stanley` | Toggle between `stanley` and `mpc`. |
 
 ### 2. Hardware Interface (`/jetracer_hardware`)
+
 | Parameter | Default | Tuning Strategy |
 | :--- | :--- | :--- |
 | `kp`, `ki` | `350`, `120` | Tune motor responsiveness at the hardware level. |
@@ -56,6 +62,7 @@ ros2 run rqt_reconfigure rqt_reconfigure
 | `command_timeout_sec` | `1.0` | Adjust the "Heart-Stop" window for loss-of-signal. |
 
 ### 3. Collision Assurance (`/collision_assurance`)
+
 | Parameter | Default | Tuning Strategy |
 | :--- | :--- | :--- |
 | `min_distance_m` | `0.45` | Increase if the car has a long stopping distance. |
@@ -69,7 +76,8 @@ ros2 run rqt_reconfigure rqt_reconfigure
 ---
 
 ## Tuning Workflow
-1.  **Bringup:** Launch the `autonomy.launch.py`.
-2.  **Monitor:** Open Foxglove and watch the `/diagnostics` and `/lane_following/debug_image`.
-3.  **Adjust:** Change `max_speed_ms` or `kp` until the lane tracking is stable.
-4.  **Persist:** Once you find the "Golden Settings," copy them back into `src/jetracer_bringup/config/main_config.yaml` to make them permanent.
+
+1. **Bringup:** Launch the `autonomy.launch.py`.
+2. **Monitor:** Open Foxglove and watch the `/diagnostics` and `/lane_following/debug_image`.
+3. **Adjust:** Change `max_speed_ms` or `kp` until the lane tracking is stable.
+4. **Persist:** Once you find the "Golden Settings," copy them back into `src/jetracer_bringup/config/main_config.yaml` to make them permanent.

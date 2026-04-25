@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -36,7 +37,7 @@ def generate_launch_description() -> LaunchDescription:
                 'model_path': LaunchConfiguration('model_path'),
                 'conf_thres': LaunchConfiguration('conf_thres'),
                 'camera_topic': LaunchConfiguration('camera_topic'),
-                'publish_debug': LaunchConfiguration('publish_debug'),
+                'publish_debug': ParameterValue(LaunchConfiguration('publish_debug'), value_type=bool),
             }],
         ),
     ])

@@ -1,4 +1,4 @@
-﻿# 00. Jetson Nano Ubuntu 20.04 Workaround
+﻿# 0. Jetson Nano Ubuntu 20.04 Workaround
 
 This project supports Jetson Nano with a practical workaround:
 

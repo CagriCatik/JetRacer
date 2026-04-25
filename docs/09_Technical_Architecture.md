@@ -1,4 +1,4 @@
-# 09. Technical Architecture
+# 9. Technical Architecture
 
 This document is a code-level architecture reference for the ROS 2 stack under `src/`.
 
@@ -28,13 +28,14 @@ The workspace implements a modular ROS 2 system for an Ackermann JetRacer platfo
 | Package | Build Type | Primary Role | Installed Executables |
 |---|---|---|---|
 | `jetracer_bringup` | `ament_cmake` | Cross-package launch orchestration | launch-only package |
-| `jetracer_description` | `ament_cmake` | URDF/xacro, TF geometry, RViz assets | launch-only package |
+| `jetracer_description` | `ament_cmake` | URDF/xacro, TF geometry, RViz assets, joint state animator | `joint_state_publisher.py` |
+| `jetracer_gazebo` | `ament_cmake` | Gazebo Harmonic simulation (Ackermann drive, camera, LiDAR, IMU) | launch-only package |
 | `jetracer_hardware` | `ament_cmake` | MCU serial bridge, LiDAR launch, scan filtering, calibration | `jetracer_serial_node`, `laser_filter.py`, `calibrate_linear.py` |
-| `jetracer_localization` | `ament_cmake` | EKF localization launch/config | launch-only package (`odom_pose_to_odometry.py` exists in source only) |
+| `jetracer_localization` | `ament_cmake` | EKF localization launch/config | launch-only package |
 | `jetracer_perception` | `ament_cmake` | Camera and vision nodes (classical + YOLO) | `color_tracking.py`, `object_tracking.py`, `motion_detect.py`, `face_detect.py`, `yolo_detection.py` |
 | `jetracer_lane_following` | `ament_cmake` | High-speed lane-following pipeline with selectable lateral control (`stanley`/`mpc`) | `lane_following_node.py` (+ installed math libs) |
-| `jetracer_navigation` | `ament_cmake` | Nav2/SLAM launch, cmd adapter, multipoint patrol | `cmd_vel_to_steering.py`, `multipoint_nav.py` |
-| `jetracer_behavior` | `ament_python` | Priority safety/semantic behavioral overrides | `semantic_behavior.py`, `collision_assurance.py` |
+| `jetracer_navigation` | `ament_cmake` | Nav2 integration, `rrt_star_planner` | Provides high-level path planning (Nav2) and local obstacle avoidance (RRT*) and converts generic geometry `Twist` to Ackermann `Twist`. | `cmd_vel_to_steering.py`, `multipoint_nav.py` |
+| `jetracer_behavior` | `ament_python` | Priority safety/semantic behavioral overrides | `semantic_behavior.py`, `collision_assurance.py`, `safety_supervisor.py`, `slip_monitor.py` |
 | `jetracer_teleop` | `ament_cmake` | keyboard/joystick teleoperation | `teleop_key.py`, `teleop_joy.py` |
 | `jetracer_voice` | `ament_cmake` | VAD/ASR/TTS/assistant helpers | `vad.py`, `tts_en.py`, `tts_cn.py`, `voice_commander.py`, `ginput.py`, `iat.py`, `aiui.py` |
 
@@ -42,6 +43,7 @@ The workspace implements a modular ROS 2 system for an Ackermann JetRacer platfo
 flowchart TB
   B[jetracer_bringup]
   D[jetracer_description]
+  G[jetracer_gazebo]
   H[jetracer_hardware]
   L[jetracer_localization]
   P[jetracer_perception]
@@ -60,6 +62,7 @@ flowchart TB
   B --> BE
   B --> T
   B --> V
+  G --> D
 
   P --> BE
   LF --> H
@@ -128,6 +131,17 @@ flowchart TD
   - base profile + LiDAR + camera + SLAM + Nav2 without map server/AMCL
 - **Autonomy AI profile**: `jetracer_bringup/autonomy.launch.py`
   - camera + lane follower + YOLO + behavior nodes + foxglove bridge
+  - Additional launch arguments vs. base profile:
+
+| Argument | Default | Description |
+|---|---|---|
+| `dry_run` | `false` | Suppress all physical motor commands |
+| `safe_mode` | `false` | Cap speed at `safe_mode_max_speed_ms` (0.20 m/s) |
+| `debug_mode` | `false` | Enable debug image publishing |
+| `start_yolo` | `true` | Skip GPU YOLO inference to save memory |
+| `start_camera` | `true` | Start CSI camera pipeline |
+| `start_base` | `true` | Start hardware + EKF + twist_mux |
+| `start_lidar` | `true` | Start RPLidar driver |
 
 ```mermaid
 sequenceDiagram
@@ -165,23 +179,35 @@ The stack uses two command semantics:
 ### 5.2 Arbitration path
 
 ```mermaid
-flowchart LR
-  T[teleop_key / teleop_joy] -->|cmd_vel_teleop P10| M[twist_mux]
-  B[semantic_behavior + collision_assurance] -->|cmd_vel_behavior P8| M
-  L[lane_following] -->|cmd_vel_lane legacy P5| M
-  V[color/line/object/face] -->|cmd_vel_vision P4| M
-  N[Nav2 controller_server] -->|cmd_vel_nav| S[cmd_vel_to_steering]
-  S -->|cmd_vel_nav_steer P3| M
-  M -->|cmd_vel| H[jetracer_serial_node]
+flowchart
+    CAM --> YOLO[yolo_detection]
+    YOLO --> SB[semantic_behavior]
+    
+    LDR --> RRT[rrt_star_planner]
+    
+    LF -->|cmd_vel_lane| MUX[twist_mux]
+    SB -->|cmd_vel_behavior| MUX
+    CA[collision_assurance] -->|cmd_vel_behavior| MUX
+    RRT -->|cmd_vel_rrt P6| MUX
+    SS[safety_supervisor] -->|cmd_vel_safety P255| MUX
+    T[teleop_key / teleop_joy] -->|cmd_vel_teleop P10| MUX
+    V[color/line/object/face] -->|cmd_vel_vision P4| MUX
+    N[Nav2 controller_server] -->|cmd_vel_nav| S[cmd_vel_to_steering]
+    S -->|cmd_vel_nav_steer P3| MUX
+    MUX -->|cmd_vel| H[jetracer_serial_node]
 ```
 
 `twist_mux` priorities (`src/jetracer_bringup/config/twist_mux.yaml`):
 
-- `cmd_vel_teleop`: priority 10, timeout 0.5
-- `cmd_vel_behavior`: priority 8, timeout 0.3
-- `cmd_vel_lane`: priority 5, timeout 0.3
-- `cmd_vel_vision`: priority 4, timeout 0.5
-- `cmd_vel_nav_steer`: priority 3, timeout 0.5
+| Topic | Priority | Timeout | Publisher |
+|---|---|---|---|
+| `cmd_vel_safety` | **255** | 0.2 s | `safety_supervisor` — hardware faults |
+| `cmd_vel_teleop` | 10 | 0.1 s | teleop keyboard / joystick |
+| `cmd_vel_behavior` | 8 | 0.3 s | `semantic_behavior`, `collision_assurance` |
+| `cmd_vel_rrt` | 6 | 0.5 s | `rrt_star_planner` |
+| `cmd_vel_lane` | 5 | 0.3 s | lane follower (legacy Twist) |
+| `cmd_vel_vision` | 4 | 0.5 s | classical vision trackers |
+| `cmd_vel_nav_steer` | 3 | 0.5 s | Nav2 controller (after steering adapter) |
 
 The lane follower also publishes `drive_lane` (`AckermannDriveStamped`) as the
 clean semantic control interface. The existing `twist_mux` chain still consumes
@@ -360,11 +386,28 @@ Inputs:
 
 Outputs:
 
-- `drive_lane`
-- `cmd_vel_lane`
-- `lane_following/waypoints`
-- `lane_following/waypoints_camera`
-- `lane_following/debug_image/compressed`
+- `drive_lane` (`AckermannDriveStamped`) — primary Ackermann command
+- `cmd_vel_lane` (`Twist`) — legacy compatibility for `twist_mux`
+- `lane_following/waypoints` (`Float32MultiArray`) — vehicle-frame waypoints (m)
+- `lane_following/waypoints_camera` (`Float32MultiArray`) — camera-space overlay points
+- `lane_following/path` (`nav_msgs/Path`) — planned centerline for RViz2
+- `lane_following/markers` (`visualization_msgs/MarkerArray`) — lookahead sphere, steering arrow, status cube
+- `lane_following/status` (`String`) — `GOOD` / `WEAK` / `LOST`
+- `lane_following/confidence` (`Float32`) — tracking confidence 0–1
+- `lane_following/control_fps` (`Float32`) — control loop rate
+- `lane_following/frame_age_sec` (`Float32`) — camera frame latency
+- `lane_following/debug_image/compressed` (`CompressedImage`) — gated at `debug_fps_limit` Hz
+
+Key parameters:
+
+| Parameter | Default | Description |
+|---|---|---|
+| `start` | `false` | Safety gate — must be set `true` to move |
+| `lateral_controller_type` | `stanley` | `stanley` or `mpc` |
+| `max_speed_ms` | `0.35` | Maximum forward speed (m/s) |
+| `enable_markers` | `true` | Publish RViz2 markers (disable on Jetson to save CPU) |
+| `debug_fps_limit` | `5.0` | Max Hz for debug image (bandwidth control) |
+| `max_frame_age_sec` | `0.20` | Skip control if camera frame is older than this |
 
 ```mermaid
 flowchart LR
@@ -596,23 +639,36 @@ stateDiagram-v2
 | Topic | Type | Producer(s) | Consumer(s) | Notes |
 |---|---|---|---|---|
 | `/cmd_vel` | `geometry_msgs/Twist` | `twist_mux` | `jetracer_serial_node` | final actuator command |
-| `cmd_vel_teleop` | `Twist` | teleop nodes | `twist_mux` | highest priority |
+| `cmd_vel_safety` | `Twist` | `safety_supervisor` | `twist_mux` | priority 255 halt |
+| `cmd_vel_teleop` | `Twist` | teleop nodes | `twist_mux` | highest manual priority |
 | `cmd_vel_behavior` | `Twist` | behavior nodes | `twist_mux` | emergency semantic/LiDAR stops |
 | `drive_lane` | `AckermannDriveStamped` | lane follower | optional direct consumers | primary lane-control command |
-| `cmd_vel_lane` | `Twist` | lane follower | `twist_mux` | legacy steering-angle compatibility command |
+| `cmd_vel_lane` | `Twist` | lane follower | `twist_mux` | legacy steering-angle compatibility |
 | `cmd_vel_vision` | `Twist` | classical vision trackers | `twist_mux` | perception-driven tracking |
 | `cmd_vel_nav` | `Twist` | Nav2 controller_server | `cmd_vel_to_steering` | pre-adaptation Nav2 command |
 | `cmd_vel_nav_steer` | `Twist` | `cmd_vel_to_steering` | `twist_mux` | adapted Nav2 command |
-| `/imu` | `sensor_msgs/Imu` | serial node | EKF | MCU-origin IMU |
+| `/imu` | `sensor_msgs/Imu` | serial node | EKF, safety_supervisor | MCU-origin IMU |
+| `/imu/data` | `sensor_msgs/Imu` | simulation bridge | EKF, safety_supervisor | sim IMU |
 | `/odom_raw` | `nav_msgs/Odometry` | serial node | EKF | raw odom |
 | `/odom` | `nav_msgs/Odometry` | EKF | Nav2 + lane follower | canonical odometry |
-| `/scan` | `sensor_msgs/LaserScan` | `rplidar_node` | Nav2, collision assurance | primary LiDAR feed |
+| `/scan` | `sensor_msgs/LaserScan` | `rplidar_node` or sim bridge | Nav2, collision assurance | primary LiDAR feed |
 | `/filteredscan` | `LaserScan` | laser_filter | optional consumers | only when filter launch is used |
-| `csi_cam_0/image_raw/compressed` | `sensor_msgs/CompressedImage` | camera pipeline | perception/lane nodes | default camera stream |
+| `csi_cam_0/image_raw/compressed` | `sensor_msgs/CompressedImage` | camera pipeline or sim | perception/lane nodes | default camera stream |
+| `csi_cam_0/camera_info` | `sensor_msgs/CameraInfo` | camera pipeline or sim | lane follower | calibration data |
+| `lane_following/path` | `nav_msgs/Path` | lane follower | RViz2 | planned centerline in base_link |
+| `lane_following/markers` | `visualization_msgs/MarkerArray` | lane follower | RViz2 | lookahead pt, steering arrow, status cube |
+| `lane_following/status` | `std_msgs/String` | lane follower | debug tools | `GOOD`/`WEAK`/`LOST` |
+| `lane_following/confidence` | `std_msgs/Float32` | lane follower | debug tools | 0–1 tracking confidence |
+| `lane_following/control_fps` | `std_msgs/Float32` | lane follower | debug tools | control loop rate |
+| `lane_following/frame_age_sec` | `std_msgs/Float32` | lane follower | debug tools | camera frame latency |
 | `lane_following/waypoints` | `Float32MultiArray` | lane follower | debug/tuning tools | vehicle-frame waypoints (m) |
 | `lane_following/waypoints_camera` | `Float32MultiArray` | lane follower | debug/tuning tools | camera-space overlay points |
 | `perception/yolo_detections` | `vision_msgs/Detection2DArray` | YOLO node | semantic behavior | semantic signal |
-| `/goal_pose` | `geometry_msgs/PoseStamped` | voice commander (and UI tools) | Nav2 BT navigator | goal API topic |
+| `battery_state` | `sensor_msgs/BatteryState` | serial node | safety_supervisor | battery voltage |
+| `/control/slipping` | `std_msgs/Bool` | slip_monitor | safety_supervisor | wheel slip flag |
+| `/control/collision_blocked` | `std_msgs/Bool` | collision_assurance | safety_supervisor | LiDAR blocked flag |
+| `/diagnostics` | `diagnostic_msgs/DiagnosticArray` | serial node, thermal_monitor | safety_supervisor | system health |
+| `/goal_pose` | `geometry_msgs/PoseStamped` | voice commander / RViz | Nav2 BT navigator | goal API topic |
 | `clicked_point` | `geometry_msgs/PointStamped` | RViz tool | multipoint_nav | mission waypoint input |
 
 ## 12. Parameter and Configuration Layering
@@ -648,20 +704,67 @@ stateDiagram-v2
 
 ## 13. Safety and Fault-Tolerance Summary
 
-- **Motion gating**: start flags default false for autonomous perception controllers.
-- **Priority override**: behavior nodes can forcibly stop at higher mux priority than autonomy.
-- **Command staleness handling**: serial bridge zeroes stale commands by timeout.
-- **CPU fallback**: YOLO node retries on CPU if configured accelerator fails.
-- **Explicit stop-on-exit**: many driving nodes publish zero command in `finally` cleanup blocks.
-- **Lifecycle enforcement**: SLAM managed node is explicitly lifecycle-managed when using slam_toolbox.
+### 13.1 `safety_supervisor` (priority 255)
+
+`jetracer_behavior/jetracer_behavior/safety_supervisor.py` sits at the top of
+the `twist_mux` hierarchy (priority 255, timeout 0.2 s) and publishes halt
+commands on `cmd_vel_safety` when any fault is active.
+
+Fault sources monitored:
+
+| Fault key | Input topic | Type | Trigger |
+|---|---|---|---|
+| `battery_low` | `battery_state` | `sensor_msgs/BatteryState` | voltage < `min_voltage` (9.5 V) |
+| `thermal_critical` | `/diagnostics` | `diagnostic_msgs/DiagnosticArray` | any zone > `max_temp` (82 °C) |
+| `hardware_failed` | `/diagnostics` | `DiagnosticArray` | serial node diagnostic ERROR |
+| `slipping` | `/control/slipping` | `std_msgs/Bool` | wheel slip detected |
+| `collision_blocked` | `/control/collision_blocked` | `Bool` | LiDAR forward cone blocked |
+
+**Fail-safe watchdog**: if any monitored input goes silent for `input_timeout_sec`
+(default 2.0 s), the corresponding fault activates automatically. This prevents
+silent feed failures from leaving the vehicle unprotected.
+
+**Teleop awareness**: when a human is on the joystick (`cmd_vel_teleop` active),
+battery and thermal soft-faults are suppressed so the operator retains authority.
+Hard faults (hardware failure, collision) override even teleop.
+
+**Clean shutdown**: publishes three zero-velocity frames before node exit.
+
+### 13.2 `thermal_monitor`
+
+`jetracer_hardware/scripts/thermal_monitor.py` enumerates all Linux thermal
+zones via sysfs (`/sys/class/thermal/thermal_zone*`) and reports GPU, PLL, AO,
+and CPU temperatures to `/diagnostics`. Also publishes CPU usage from `/proc/stat`.
+
+### 13.3 `slip_monitor`
+
+`jetracer_behavior/jetracer_behavior/slip_monitor.py` compares commanded velocity
+with odometry-reported velocity to detect wheel slip. Publishes `/control/slipping`.
+
+### 13.4 Hardware driver safety
+
+- **Dry-run mode** (`dry_run:=true`): suppresses all physical serial writes.
+- **Acceleration ramp** (`max_accel_mps2`): prevents sudden velocity jumps.
+- **Startup guardrail** (`startup_speed_limit_ms`): caps speed for 30 s after boot.
+- **Serial reconnect**: automatically re-opens the port after USB disconnect.
+- **Command timeout**: serial node zeroes commands after `command_timeout_sec` silence.
+
+### 13.5 Summary
+
+- Motion gating: `start=false` by default for all autonomous nodes.
+- Priority override: behavior/safety nodes can forcibly halt at higher mux priority.
+- Explicit stop-on-exit: driving nodes publish zero command in `finally` blocks.
+- Lifecycle enforcement: SLAM managed node is explicitly lifecycle-managed.
 
 ## 14. Known Architectural Caveats
 
-- `autonomy.launch.py` starts AI perception/behavior nodes but does **not** include base hardware/mux stack; it is an overlay profile, not a full robot bringup by itself.
+- `autonomy.launch.py` starts AI perception/behavior nodes but does **not** include base hardware/mux stack by default when `start_base:=false`; it is typically used as an overlay profile on top of `jetracer.launch.py`.
 - `laser_filter.py` publishes `filteredscan`, while default Nav2 and behavior wiring consume `scan`; filtered data is opt-in and requires explicit remap/use.
-- `odom_pose_to_odometry.py` exists for compatibility, but is intentionally not installed in ROS 2 packaging.
+- `odom_pose_to_odometry.py` exists for compatibility, but is intentionally not installed in ROS 2 packaging to avoid duplicate `/odom` publishers when EKF is active.
 - `main_config.yaml` contains `voice_commander` parameters, but no top-level bringup launch currently instantiates `voice_commander.py`.
 - In `jetracer_serial_node`, updating `send_period_sec` via dynamic parameters updates the variable but does not recreate the already-created send timer.
+- `jetracer_gazebo` simulation never starts `jetracer_hardware` to prevent accidental real motor commands when simulation and hardware share a `ROS_DOMAIN_ID`.
+- `enable_markers:=false` should be set in `main_config.yaml` for Jetson Nano deployments to avoid CPU overhead from RViz2 marker publishing during autonomous driving.
 
 ## 15. Extension Guidelines
 

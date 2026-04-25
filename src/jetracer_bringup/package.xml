@@ -15,11 +15,18 @@
   <exec_depend>jetracer_lane_following</exec_depend>
   <exec_depend>jetracer_behavior</exec_depend>
   <exec_depend>jetracer_perception</exec_depend>
+  <exec_depend>jetracer_teleop</exec_depend>
   <exec_depend>jetracer_voice</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
+  <exec_depend>joy</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+  <exec_depend>rclpy</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
   <exec_depend>xacro</exec_depend>
   <exec_depend>twist_mux</exec_depend>
   <exec_depend>foxglove_bridge</exec_depend>

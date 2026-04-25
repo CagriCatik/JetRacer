@@ -17,6 +17,7 @@ def generate_launch_description() -> LaunchDescription:
     rviz_config = LaunchConfiguration('rviz_config')
     rviz_fixed_frame = LaunchConfiguration('rviz_fixed_frame')
     use_sim_time = LaunchConfiguration('use_sim_time')
+    dry_run = LaunchConfiguration('dry_run')
 
     # Build robot_description from xacro at launch time
     robot_description = ParameterValue(
@@ -98,6 +99,11 @@ def generate_launch_description() -> LaunchDescription:
             default_value='false',
             description='Use simulation time for RViz.',
         ),
+        DeclareLaunchArgument(
+            'dry_run',
+            default_value='false',
+            description='Start the hardware node without opening or writing the serial port.',
+        ),
 
         # CRITICAL FIX: On the physical robot, never launch joint_state_publisher
         # (GUI or otherwise) — it floods /joint_states with zeros and conflicts
@@ -115,7 +121,10 @@ def generate_launch_description() -> LaunchDescription:
             PythonLaunchDescriptionSource(PathJoinSubstitution([
                 FindPackageShare('jetracer_hardware'), 'launch', 'hardware.launch.py',
             ])),
-            launch_arguments={'params_file': hardware_params_file}.items(),
+            launch_arguments={
+                'params_file': hardware_params_file,
+                'dry_run': dry_run,
+            }.items(),
         ),
 
         IncludeLaunchDescription(

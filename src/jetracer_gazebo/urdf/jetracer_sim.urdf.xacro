@@ -1,0 +1,264 @@
+<?xml version="1.0" ?>
+<!--
+  jetracer_sim.urdf.xacro
+  ========================
+  Gazebo Harmonic (gz-sim 8) plugin additions for the JetRacer URDF.
+
+  This file is loaded ONLY during simulation. It is NOT included by
+  jetracer.urdf.xacro by default — the simulation launch processes both
+  files together via xacro with the `sim:=true` argument.
+
+  Plugin inventory
+  ----------------
+  1. gz::sim::systems::AckermannSteering
+       Subscribes to /cmd_vel (geometry_msgs/Twist) and drives front steering
+       joints + rear drive wheels with realistic Ackermann kinematics.
+       Also publishes /odom (nav_msgs/Odometry) and /tf odom→base_footprint.
+
+  2. gz::sim::systems::Imu
+       Publishes /imu/data (sensor_msgs/Imu) from imu_link.
+
+  3. gz::sim::systems::Camera
+       Publishes camera images from camera_link_optical.
+       Bridged to /csi_cam_0/image_raw to match the real CSI pipeline.
+
+  4. gz::sim::systems::GpuLidar  (2D slice)
+       Publishes /scan (sensor_msgs/LaserScan) from laser_link.
+
+  5. gz::sim::systems::JointStatePublisher
+       Publishes /joint_states for robot_state_publisher.
+
+  Interface compatibility
+  -----------------------
+  All gz topic names use a /jetracer/ prefix inside Gazebo and are remapped
+  to the standard ROS 2 names via ros_gz_bridge.yaml. This means:
+    gz topic /jetracer/cmd_vel  ← ros2 topic /cmd_vel
+    gz topic /jetracer/odom     → ros2 topic /odom
+    gz topic /jetracer/camera   → ros2 topic /csi_cam_0/image_raw
+    gz topic /jetracer/scan     → ros2 topic /scan
+    gz topic /jetracer/imu      → ros2 topic /imu/data
+
+  See config/ros_gz_bridge.yaml for the full mapping.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="jetracer">
+
+  <!-- ── Gazebo material overrides ────────────────────────────────────────── -->
+
+  <gazebo reference="base_link">
+    <material>Gazebo/Blue</material>
+    <mu1>0.5</mu1>
+    <mu2>0.5</mu2>
+  </gazebo>
+
+  <gazebo reference="front_left_wheel_link">
+    <material>Gazebo/Black</material>
+    <mu1>1.2</mu1>
+    <mu2>1.0</mu2>
+    <kp>1e6</kp>
+    <kd>1.0</kd>
+  </gazebo>
+
+  <gazebo reference="front_right_wheel_link">
+    <material>Gazebo/Black</material>
+    <mu1>1.2</mu1>
+    <mu2>1.0</mu2>
+    <kp>1e6</kp>
+    <kd>1.0</kd>
+  </gazebo>
+
+  <gazebo reference="rear_left_wheel_link">
+    <material>Gazebo/Black</material>
+    <mu1>1.2</mu1>
+    <mu2>1.0</mu2>
+    <kp>1e6</kp>
+    <kd>1.0</kd>
+  </gazebo>
+
+  <gazebo reference="rear_right_wheel_link">
+    <material>Gazebo/Black</material>
+    <mu1>1.2</mu1>
+    <mu2>1.0</mu2>
+    <kp>1e6</kp>
+    <kd>1.0</kd>
+  </gazebo>
+
+  <!-- ── 1. Ackermann Steering plugin ──────────────────────────────────────
+       Reads cmd_vel Twist.
+       Drives:
+         - front_left_steering_joint  (revolute, steering)
+         - front_right_steering_joint (revolute, steering)
+         - rear_left_wheel_joint      (continuous, drive)
+         - rear_right_wheel_joint     (continuous, drive)
+       Publishes gz odometry and tf.
+  -->
+  <gazebo>
+    <plugin
+      filename="gz-sim-ackermann-steering-system"
+      name="gz::sim::systems::AckermannSteering">
+
+      <!-- Topic this plugin subscribes to for velocity commands -->
+      <topic>/jetracer/cmd_vel</topic>
+      <!-- Odometry output topic (bridged to /odom) -->
+      <odom_topic>/jetracer/odom</odom_topic>
+      <!-- TF output topic (bridged to /tf) -->
+      <tf_topic>/jetracer/tf</tf_topic>
+
+      <!-- Joint names — must match jetracer.urdf.xacro exactly -->
+      <left_steering_joint>front_left_steering_joint</left_steering_joint>
+      <right_steering_joint>front_right_steering_joint</right_steering_joint>
+      <left_rear_wheel_joint>rear_left_wheel_joint</left_rear_wheel_joint>
+      <right_rear_wheel_joint>rear_right_wheel_joint</right_rear_wheel_joint>
+      <!-- Front wheel joints are passive (no drive) in this Ackermann setup -->
+      <left_front_wheel_joint>front_left_wheel_joint</left_front_wheel_joint>
+      <right_front_wheel_joint>front_right_wheel_joint</right_front_wheel_joint>
+
+      <!-- Physical parameters — must match URDF properties -->
+      <kingpin_width>0.180</kingpin_width>    <!-- track_width -->
+      <wheelbase>0.255</wheelbase>            <!-- wheelbase -->
+      <wheel_radius>0.035</wheel_radius>      <!-- wheel_radius -->
+
+      <!-- Steering limits (radians) — matches URDF joint limits -->
+      <steering_limit>0.60</steering_limit>
+
+      <!-- Drive: velocity PID gains for rear wheel joints -->
+      <velocity_p_gain>10.0</velocity_p_gain>
+      <velocity_i_gain>0.0</velocity_i_gain>
+      <velocity_d_gain>0.0</velocity_d_gain>
+
+      <!-- Steering: position PID gains -->
+      <position_p_gain>100.0</position_p_gain>
+      <position_i_gain>0.0</position_i_gain>
+      <position_d_gain>5.0</position_d_gain>
+
+      <!-- Odometry frames -->
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_footprint</child_frame_id>
+
+      <!-- Publish tf from odom → base_footprint -->
+      <publish_tf>true</publish_tf>
+
+      <!-- Minimum speed to apply steering (avoids oscillation at rest) -->
+      <min_velocity>0.01</min_velocity>
+
+      <odom_publish_frequency>30.0</odom_publish_frequency>
+    </plugin>
+  </gazebo>
+
+  <!-- ── 2. IMU sensor ─────────────────────────────────────────────────────
+       Attached to imu_link. Bridged to /imu/data.
+  -->
+  <gazebo reference="imu_link">
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>50</update_rate>
+      <topic>/jetracer/imu</topic>
+      <gz_frame_id>imu_link</gz_frame_id>
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.002</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.002</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.002</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.015</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.015</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.015</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
+
+  <!-- ── 3. Camera sensor ──────────────────────────────────────────────────
+       Attached to camera_link_optical (correct optical frame).
+       Resolution: 640×480 @ 30 Hz (matches cam_640x480.yaml calibration).
+       Bridged to /csi_cam_0/image_raw and /csi_cam_0/camera_info.
+
+       Horizontal FOV: 1.396 rad ≈ 80° (conservative — real IMX219 is ~160°
+       but 80° avoids fisheye distortion that Gazebo's pinhole camera cannot
+       represent. Lane detection works well at this FOV in simulation.)
+  -->
+  <gazebo reference="camera_link_optical">
+    <sensor name="camera_sensor" type="camera">
+      <always_on>true</always_on>
+      <update_rate>30</update_rate>
+      <topic>/jetracer/camera/image_raw</topic>
+      <gz_frame_id>camera_link_optical</gz_frame_id>
+      <camera>
+        <horizontal_fov>1.396</horizontal_fov>    <!-- ~80 deg -->
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>RGB_INT8</format>
+        </image>
+        <clip>
+          <near>0.01</near>
+          <far>20.0</far>
+        </clip>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.007</stddev>
+        </noise>
+        <lens>
+          <type>pinhole</type>
+        </lens>
+      </camera>
+    </sensor>
+  </gazebo>
+
+  <!-- ── 4. 2D LiDAR sensor ────────────────────────────────────────────────
+       Attached to laser_link (mounted upside-down per URDF: rpy="pi 0 0").
+       The URDF rotation accounts for this — Gazebo sees the corrected pose.
+       Published to /jetracer/scan, bridged to /scan.
+
+       Parameters match common RPLidar A1/A2 used with JetRacer:
+         range: 0.15–8.0 m, 360° at 8 Hz, 360 samples/rev
+  -->
+  <gazebo reference="laser_link">
+    <sensor name="lidar_sensor" type="gpu_lidar">
+      <always_on>true</always_on>
+      <update_rate>8.0</update_rate>
+      <topic>/jetracer/scan</topic>
+      <gz_frame_id>laser_link</gz_frame_id>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.15</min>
+          <max>8.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+      <visualize>false</visualize>
+    </sensor>
+  </gazebo>
+
+  <!-- ── 5. Joint state publisher ──────────────────────────────────────────
+       Publishes /joint_states for robot_state_publisher (TF tree).
+  -->
+  <gazebo>
+    <plugin
+      filename="gz-sim-joint-state-publisher-system"
+      name="gz::sim::systems::JointStatePublisher">
+      <topic>/jetracer/joint_states</topic>
+      <joint_name>front_left_steering_joint</joint_name>
+      <joint_name>front_right_steering_joint</joint_name>
+      <joint_name>front_left_wheel_joint</joint_name>
+      <joint_name>front_right_wheel_joint</joint_name>
+      <joint_name>rear_left_wheel_joint</joint_name>
+      <joint_name>rear_right_wheel_joint</joint_name>
+    </plugin>
+  </gazebo>
+
+</robot>

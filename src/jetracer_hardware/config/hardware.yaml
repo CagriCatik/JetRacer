@@ -18,3 +18,19 @@
     command_timeout_sec: 1.0
     send_period_sec: 0.02
     wheel_radius: 0.035
+    max_linear_velocity: 1.2
+    max_lateral_velocity: 0.0
+    max_steering_angle: 0.6
+
+    # ── Safety additions ─────────────────────────────────────────────────────
+    # dry_run: log commands but suppress all serial writes. Use on the bench.
+    dry_run: false
+
+    # Acceleration ramp: max speed change per second to prevent velocity jumps
+    # when the watchdog re-enables or a new command arrives after a pause.
+    max_accel_mps2: 0.5
+
+    # Startup speed limit: cap absolute velocity for the first startup_duration_sec
+    # seconds after node start, regardless of commanded speed.
+    startup_speed_limit_ms: 0.20
+    startup_duration_sec: 30.0

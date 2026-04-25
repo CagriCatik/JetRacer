@@ -80,6 +80,8 @@ def generate_launch_description() -> LaunchDescription:
                 'use_multipoint_nav': use_multipoint_nav,
                 'use_sim_time': use_sim_time,
                 'config_file': config_file,
+                'start_base': 'false',
+                'start_lidar': 'false',
             }.items(),
         ),
     ])

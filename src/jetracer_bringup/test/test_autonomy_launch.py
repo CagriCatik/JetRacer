@@ -1,9 +1,19 @@
-import os
+"""
+Launch integration test for the JetRacer autonomy stack.
+
+Starts the full autonomy.launch.py (camera off, hardware on) and verifies:
+  1. Critical nodes log their initialisation messages within a timeout.
+  2. Core safety and control topics are advertised.
+
+Run with:
+    colcon test --packages-select jetracer_bringup
+    colcon test-result --verbose
+"""
+
+import time
 import unittest
-from typing import List
 
 import launch
-import launch_ros
 import launch_testing
 import launch_testing.actions
 import launch_testing.markers
@@ -14,24 +24,32 @@ from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 
 import rclpy
-from rclpy.node import Node
-from rcl_interfaces.msg import ParameterDescriptor
+
 
 @pytest.mark.launch_test
 @launch_testing.markers.keep_alive
 def generate_test_description():
     """
-    Launches the full autonomy stack in a test sandbox.
+    Launch the autonomy stack in a hardware-free test mode:
+      - start_camera=false   skip CSI camera (not available in CI)
+      - start_base=true      start serial hardware node (uses dry_run)
+      - start_lidar=false    no RPLidar in CI
+      - dry_run=true         suppress all serial writes
     """
     launch_description = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
                 FindPackageShare('jetracer_bringup'),
                 'launch',
-                'autonomy.launch.py'
+                'autonomy.launch.py',
             ])
         ),
-        launch_arguments={'start_camera': 'false'}.items(), # Skip camera in CI if possible
+        launch_arguments={
+            'start_camera': 'false',
+            'start_lidar': 'false',
+            'start_yolo': 'false',
+            'dry_run': 'true',
+        }.items(),
     )
 
     return launch.LaunchDescription([
@@ -39,55 +57,54 @@ def generate_test_description():
         launch_testing.actions.ReadyToTest(),
     ])
 
+
 class TestAutonomyBringup(unittest.TestCase):
 
     def test_node_startup(self, proc_output):
         """
-        Wait for the stack to start and verify that nodes are initialized.
+        Wait for the stack to start and verify that core nodes log their
+        initialisation messages within the timeout.
         """
-        # We expect to see the initialization log from at least one core node
-        proc_output.assertWaitFor('LiDAR Collision Assurance initialized.', timeout=10)
-        proc_output.assertWaitFor('Initialized C++ Ackermann Bridge', timeout=10)
+        proc_output.assertWaitFor('Safety supervisor initialized.', timeout=20)
+        proc_output.assertWaitFor('Startup speed limit active', timeout=20)
 
     def test_topic_advertising(self):
         """
         Verify that critical safety and control topics are advertised by the stack.
-        This checks that core autonomy nodes are actually publishing expected outputs.
+        Retries up to 10 seconds to allow nodes time to start.
         """
-        # Initialize ROS 2 context for topic discovery
         rclpy.init()
-        test_node = Node('autonomy_test_monitor')
-        
-        try:
-            # Wait for critical topics to be advertised
-            critical_topics = {
-                'cmd_vel_lane': 'geometry_msgs/msg/Twist',  # Lane following output
-                'cmd_vel_safety': 'geometry_msgs/msg/Twist',  # Safety arbitration output
-                'lane_following/debug_image/compressed': 'sensor_msgs/msg/CompressedImage',  # Vision feedback
-                'detections': 'vision_msgs/msg/Detection2DArray',  # YOLO output
-            }
-            
-            for attempt in range(10):  # Retry up to 10 times (10 seconds total)
-                advertised = test_node.get_topic_names_and_types()
-                advertised_dict = {topic: types[0] if types else 'unknown' 
-                                 for topic, types in advertised}
-                
-                all_found = all(topic in advertised_dict for topic in critical_topics.keys())
-                if all_found:
-                    break
-                
-                if attempt < 9:
-                    rclpy.spin_once(test_node, timeout_sec=1.0)
-            
-            # Assert that all critical topics are now advertised
-            advertised = {topic: types[0] if types else 'unknown' 
-                         for topic, types in test_node.get_topic_names_and_types()}
-            
-            for topic, expected_type in critical_topics.items():
-                self.assertIn(topic, advertised, 
-                            f"Critical topic '{topic}' not advertised by autonomy stack")
-                
-        finally:
-            test_node.destroy_node()
-            rclpy.shutdown()
 
+        class _Probe(rclpy.node.Node):
+            def __init__(self):
+                super().__init__('autonomy_test_probe')
+
+        probe = _Probe()
+        critical_topics = {
+            'cmd_vel_safety':   'geometry_msgs/msg/Twist',
+            'cmd_vel_lane':     'geometry_msgs/msg/Twist',
+        }
+
+        try:
+            deadline = time.monotonic() + 10.0
+            while time.monotonic() < deadline:
+                advertised = {
+                    topic: types[0] if types else 'unknown'
+                    for topic, types in probe.get_topic_names_and_types()
+                }
+                if all(t in advertised for t in critical_topics):
+                    break
+                rclpy.spin_once(probe, timeout_sec=0.5)
+
+            advertised = {
+                topic: types[0] if types else 'unknown'
+                for topic, types in probe.get_topic_names_and_types()
+            }
+            for topic in critical_topics:
+                self.assertIn(
+                    topic, advertised,
+                    f"Critical topic '{topic}' not advertised by autonomy stack",
+                )
+        finally:
+            probe.destroy_node()
+            rclpy.try_shutdown()

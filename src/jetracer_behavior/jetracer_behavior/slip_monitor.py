@@ -10,6 +10,7 @@ wheel slip (drifting or spinning), which can corrupt localization and navigation
 import math
 
 import rclpy
+from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy, HistoryPolicy
 from nav_msgs.msg import Odometry
@@ -63,7 +64,6 @@ class SlipMonitorNode(Node):
         self._window = int(fetch('window_size'))
 
     def _param_callback(self, params) -> SetParametersResult:
-        from rcl_interfaces.msg import SetParametersResult
         updated = {p.name: p.value for p in params}
         self._load_params(updates=updated)
         return SetParametersResult(successful=True)

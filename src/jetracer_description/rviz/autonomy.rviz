@@ -1,50 +1,69 @@
+###############################################################################
+#  JetRacer Autonomy RViz2 Profile
+#
+#  Covers all topics produced by the JetRacer autonomous driving stack:
+#    - Robot model + TF tree
+#    - LiDAR laser scan  (/scan)
+#    - Odometry          (/odom)
+#    - Lane centerline   (nav_msgs/Path)
+#    - Planned waypoints (PoseArray)
+#    - Lane markers      (MarkerArray: lookahead pt, steering arrow, status cube)
+#    - Lane following debug image (CompressedImage)
+#    - YOLO debug image  (CompressedImage)
+#
+#  Performance notes:
+#    - Image displays are disabled by default; enable only on a remote laptop.
+#    - Frame Rate is capped at 20 to match camera rate.
+#    - Fixed frame = odom (after EKF publishes it); use base_footprint if EKF
+#      is not running.
+###############################################################################
+
 Panels:
   - Class: rviz_common/Displays
+    Help Height: 0
     Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /lane_following/markers1
+        - /Lane Centerline (Path)1
+      Splitter Ratio: 0.5
+    Tree Height: 700
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
+    Expanded:
+      - /2D Goal Pose1
+      - /Publish Point1
     Name: Tool Properties
+    Splitter Ratio: 0.589
   - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
     Name: Views
+    Splitter Ratio: 0.5
+
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.45
-      Cell Size: 1
+
+    # ── Environment ──────────────────────────────────────────────────────────
+
+    - Alpha: 0.35
+      Cell Size: 0.5
       Class: rviz_default_plugins/Grid
-      Color: 160; 160; 164
+      Color: 128; 128; 128
       Enabled: true
       Line Style:
-        Line Width: 0.03
+        Line Width: 0.02
         Value: Lines
       Name: Grid
       Plane: XY
-      Plane Cell Count: 20
+      Plane Cell Count: 40
       Reference Frame: <Fixed Frame>
       Value: true
-    - Class: rviz_default_plugins/LaserScan
-      Enabled: true
-      Name: LaserScan
-      Size (Pixels): 3
-      Style: Flat Squares
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Best Effort
-        Value: /scan
-      Value: true
-    - Class: rviz_default_plugins/Odometry
-      Enabled: true
-      Name: Odometry
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /odom
-      Value: true
+
+    # ── Robot Model (from /robot_description via robot_state_publisher) ──────
+
     - Class: rviz_default_plugins/RobotModel
       Collision Enabled: false
       Description Source: Topic
@@ -59,10 +78,116 @@ Visualization Manager:
       TF Prefix: ""
       Visual Enabled: true
       Value: true
-    - Class: rviz_default_plugins/PoseArray
-      Color: 0; 255; 0
+
+    # ── TF Tree ──────────────────────────────────────────────────────────────
+    # Frames: base_footprint → base_link → camera_link → camera_link_optical
+    #                                    → imu_link
+    #                                    → laser_link
+    #         odom → base_footprint  (from EKF or serial node when publish_odom_transform=true)
+
+    - Class: rviz_default_plugins/TF
       Enabled: true
-      Name: Predicted Path
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Scale: 0.20
+      Name: TF
+      Show Arrows: false
+      Show Axes: true
+      Show Names: true
+      Value: true
+
+    # ── LiDAR ────────────────────────────────────────────────────────────────
+
+    - Class: rviz_default_plugins/LaserScan
+      Color: 255; 50; 50
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: LiDAR Scan
+      Size (Pixels): 3
+      Size (m): 0.03
+      Style: Flat Squares
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /scan
+      Value: true
+
+    # ── Odometry (EKF output) ─────────────────────────────────────────────────
+
+    - Class: rviz_default_plugins/Odometry
+      Angle Tolerance: 0.1
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.3
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: false
+      Enabled: true
+      Keep: 200
+      Name: Odometry (EKF)
+      Position Tolerance: 0.1
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /odom
+      Value: true
+
+    # ── Lane Centerline Path ──────────────────────────────────────────────────
+
+    - Class: rviz_default_plugins/Path
+      Buffer Length: 1
+      Color: 0; 220; 80
+      Enabled: true
+      Head Diameter: 0.05
+      Head Length: 0.05
+      Length: 0.3
+      Line Style: Billboards
+      Line Width: 0.015
+      Name: Lane Centerline (Path)
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.01
+      Shaft Diameter: 0.02
+      Shaft Length: 0.1
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /lane_following/path
+      Value: true
+
+    # ── Waypoints (PoseArray from lane_following/path_viz) ───────────────────
+
+    - Class: rviz_default_plugins/PoseArray
+      Color: 0; 255; 170
+      Enabled: true
+      Head Length: 0.04
+      Head Radius: 0.02
+      Name: Waypoints (PoseArray)
+      Shaft Length: 0.10
+      Shaft Radius: 0.01
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -70,30 +195,115 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /lane_following/path_viz
       Value: true
-    - Class: rviz_default_plugins/Image
-      Enabled: false
-      Name: YOLO Vision
+
+    # ── Lane Following Markers (lookahead, steering arrow, status cube) ───────
+
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Lane Following Markers
+      Namespaces:
+        lane_following: true
       Topic:
         Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /lane_following/markers
+      Value: true
+
+    # ── RRT* Planner Displays ─────────────────────────────────────────────────
+
+    - Class: rviz_default_plugins/Map
+      Alpha: 0.5
+      Color Scheme: map
+      Draw Behind: true
+      Enabled: false
+      Name: RRT* Local Grid
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /rrt_star/local_grid
+      Value: true
+
+    - Class: rviz_default_plugins/Path
+      Buffer Length: 1
+      Color: 255; 165; 0
+      Enabled: false
+      Head Diameter: 0.05
+      Head Length: 0.05
+      Length: 0.3
+      Line Style: Lines
+      Line Width: 0.02
+      Name: RRT* Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /rrt_star/path
+      Value: true
+
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: false
+      Name: RRT* Tree Markers
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /rrt_star/markers
+      Value: true
+
+    # ── Lane Following Debug Image ────────────────────────────────────────────
+    # DISABLED by default — enable on remote laptop only.
+    # At 5 Hz this costs ~2 Mbps on the ROS 2 network.
+
+    - Class: rviz_default_plugins/Image
+      Enabled: false
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Lane Debug Image
+      Normalize Range: true
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /lane_following/debug_image/compressed
+      Value: true
+
+    # ── YOLO Perception Debug Image ───────────────────────────────────────────
+    # DISABLED by default — enable on remote laptop only.
+
+    - Class: rviz_default_plugins/Image
+      Enabled: false
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: YOLO Perception Image
+      Normalize Range: true
+      Topic:
+        Depth: 1
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Best Effort
         Value: /perception/yolo_debug/compressed
       Value: true
-    - Class: rviz_default_plugins/TF
-      Enabled: true
-      Frame Timeout: 15
-      Marker Scale: 0.25
-      Name: TF
-      Show Arrows: true
-      Show Axes: true
-      Show Names: true
-      Value: true
+
   Enabled: true
   Global Options:
-    Background Color: 30; 30; 30
+    Background Color: 20; 22; 28
     Fixed Frame: odom
-    Frame Rate: 30
+    Frame Rate: 20
   Name: root
   Tools:
     - Class: rviz_default_plugins/Interact
@@ -102,20 +312,34 @@ Visualization Manager:
     - Class: rviz_default_plugins/Select
     - Class: rviz_default_plugins/FocusCamera
     - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 3.0
+      Distance: 2.8
       Focal Point:
-        X: 0
+        X: 0.12
         Y: 0
         Z: 0.05
-      Name: Current View
-      Near Clip Distance: 0.01
-      Pitch: 0.9
+      Name: Autonomy View
+      Near Clip Distance: 0.005
+      Pitch: 0.85
       Target Frame: base_footprint
       Value: Orbit (rviz)
-      Yaw: 0.8
+      Yaw: 3.14
+    Saved: ~
+
 Window Geometry:
-  Height: 900
-  Width: 1400
+  Displays:
+    collapsed: false
+  Height: 1000
+  Hide Left Dock: false
+  Hide Right Dock: true
+  QMainWindow State: ""
+  Tool Properties:
+    collapsed: false
+  Views:
+    collapsed: false
+  Width: 1600
+  X: 40
+  Y: 40

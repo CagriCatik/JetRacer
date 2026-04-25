@@ -27,8 +27,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-gscam \
     ros-humble-camera-info-manager \
     ros-humble-cv-bridge \
+    ros-humble-diagnostic-updater \
     ros-humble-image-transport \
     ros-humble-joy \
+    ros-humble-ackermann-msgs \
     ros-humble-xacro \
     ros-humble-robot-state-publisher \
     ros-humble-joint-state-publisher \

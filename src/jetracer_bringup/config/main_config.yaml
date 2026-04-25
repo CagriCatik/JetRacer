@@ -4,15 +4,16 @@
 
 lane_following:
   ros__parameters:
-    start: true
+    start: false                  # SAFETY: operator must explicitly enable autonomous motion
     max_speed_ms: 0.35
+    safe_mode_max_speed_ms: 0.20      # Used when autonomy.launch.py safe_mode:=true
     min_speed_ms: 0.05
     kp: 1.5
     ki: 0.0
     kd: 0.2
     integral_windup_limit: 2.0
     max_steering_rad: 0.6
-    lateral_controller_type: "stanley"   # "stanley" or "mpc"
+    lateral_controller_type: "stanley"   # "stanley" or "mpc" — use stanley for thermal-limited hardware
     gain_constant: 1.8
     damping_constant: 0.25
     steering_smoothing: 0.25
@@ -87,6 +88,21 @@ cmd_vel_to_steering:
     max_steering_angle: 0.60
     min_speed_for_steering: 0.05
 
+rrt_star_planner:
+  ros__parameters:
+    start: false
+    planning_frequency: 10.0
+    max_planning_time_ms: 30
+    max_iterations: 400
+    grid_resolution: 0.05
+    inflation_radius: 0.35
+    search_radius: 0.5
+    pure_pursuit_lookahead: 0.6
+    max_speed: 0.3
+    safe_mode_max_speed_ms: 0.20
+    wheelbase: 0.14
+    max_steering_angle: 0.6
+
 foxglove_bridge:
   ros__parameters:
     port: 8765
@@ -130,7 +146,11 @@ teleop_joy:
     x_speed: 0.3
     y_speed: 0.0
     w_speed: 1.0
-    linear_axis: 3
-    angular_axis: 0
-    deadman_button: 6
+    # Xbox Controller Mapping:
+    # 1 = Left Stick Up/Down (Throttle)
+    # 3 = Right Stick Left/Right (Steering)
+    # 4 = LB Button (Deadman switch)
+    linear_axis: 1
+    angular_axis: 3
+    deadman_button: 4
     hz: 20

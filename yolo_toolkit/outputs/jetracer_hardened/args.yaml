@@ -12,7 +12,7 @@ save_period: -1
 cache: false
 device: 0
 workers: 8
-project: yolo_toolkit/outputs
+project: outputs
 name: jetracer_hardened
 exist_ok: false
 pretrained: true
@@ -104,4 +104,4 @@ erasing: 0.4
 crop_fraction: 1.0
 cfg: null
 tracker: botsort.yaml
-save_dir: yolo_toolkit\outputs\jetracer_hardened
+save_dir: outputs\jetracer_hardened

@@ -20,14 +20,16 @@ except ImportError:
 class OledNode(Node):
     def __init__(self):
         super().__init__('oled_node')
-        
-        if not HAS_OLED_LIBS:
-            self.get_logger().error("Missing OLED dependencies (PIL, adafruit-ssd1306).")
-            raise RuntimeError("Missing OLED dependencies")
 
         self.declare_parameter('width', 128)
         self.declare_parameter('height', 32)
         self.declare_parameter('i2c_bus', 1)
+
+        self._display_available = False
+
+        if not HAS_OLED_LIBS:
+            self.get_logger().warn("Missing OLED dependencies (PIL, adafruit-ssd1306); display disabled.")
+            return
 
         # Initialize Hardware
         try:
@@ -38,8 +40,10 @@ class OledNode(Node):
                 self.i2c
             )
         except Exception as e:
-            self.get_logger().error(f"Failed to initialize OLED on I2C: {e}")
-            raise e
+            self.get_logger().warn(f"Failed to initialize OLED on I2C; display disabled: {e}")
+            return
+
+        self._display_available = True
 
         # State cache
         self._battery_pct = 0.0
@@ -93,27 +97,21 @@ class OledNode(Node):
         self._active_mission = msg.data
 
     def _render(self):
+        if not self._display_available:
+            return
+
         # Create blank image for drawing.
         image = Image.new('1', (self.display.width, self.display.height))
         draw = ImageDraw.Draw(image)
         font = ImageFont.load_default()
 
-        # Draw Headers
+        # Fit status onto the 128x32 OLED used by the Waveshare JetRacer ROS kit.
         draw.text((0, 0), f"MISSION: {self._active_mission}", font=font, fill=255)
-        draw.line((0, 12, 128, 12), fill=255)
-
-        # Line 1: IP Address
-        draw.text((0, 15), f"IP: {self._ip}", font=font, fill=255)
-
-        # Line 2: Battery & Temp
-        draw.text((0, 27), f"BAT: {self._battery_v:.1f}V ({int(self._battery_pct)}%)", font=font, fill=255)
-        draw.text((0, 39), f"CPU: {self._temp:.1f}C", font=font, fill=255)
-
-        # Line 3: Speed & Faults
+        draw.text((0, 11), f"IP: {self._ip}", font=font, fill=255)
         if self._faults:
-            draw.text((0, 51), f"ERR: {','.join(self._faults)}", font=font, fill=255)
+            draw.text((0, 22), f"ERR: {','.join(self._faults)}", font=font, fill=255)
         else:
-            draw.text((0, 51), f"SPD: {self._speed:.2f} m/s", font=font, fill=255)
+            draw.text((0, 22), f"BAT:{self._battery_v:.1f}V CPU:{self._temp:.0f}C", font=font, fill=255)
 
         # Display image
         self.display.image(image)

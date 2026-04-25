@@ -201,6 +201,9 @@ def target_speed_prediction(
         forward_extent = max(float(w[0, -1] - w[0, 0]), 1e-3)
         curvature_term = float(np.sum(np.abs(heading_steps)) / forward_extent)
 
+    heading_error = float(np.arctan2(w[1, -1] - w[1, 0], max(float(w[0, -1] - w[0, 0]), 1e-3)))
+    curvature_term += abs(heading_error)
+
     base_speed = (float(max_speed) - float(min_speed)) * np.exp(-float(K_v) * curvature_term) + float(min_speed)
     base_speed = float(np.clip(base_speed, min_speed, max_speed))
 

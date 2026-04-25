@@ -39,6 +39,7 @@ class TeleopJoyNode(Node):
 
         self._cmd = Twist()
         self._active = False
+        self._publish_stop_once = False
 
         self._pub = self.create_publisher(Twist, 'cmd_vel_teleop', 10)
         self._sub = self.create_subscription(Joy, 'joy', self._joy_callback, 10)
@@ -55,11 +56,16 @@ class TeleopJoyNode(Node):
     def _joy_callback(self, msg: Joy) -> None:
         """Process incoming Joy messages and update the current command."""
         if self._deadman_button >= len(msg.buttons):
-            self.get_logger().warn_once(
+            self.get_logger().warn(
                 f'deadman_button index {self._deadman_button} out of range '
                 f'(Joy has {len(msg.buttons)} buttons). '
-                'Override with parameter "deadman_button".'
+                'Override with parameter "deadman_button".',
+                once=True,
             )
+            if self._active:
+                self._cmd = Twist()
+                self._active = False
+                self._publish_stop_once = True
             return
 
         if msg.buttons[self._deadman_button] == 1:
@@ -71,7 +77,10 @@ class TeleopJoyNode(Node):
             # y_speed maps to linear.y for holonomic platforms.
             self._cmd.linear.y = self._y_speed
             self._active = True
+            self._publish_stop_once = False
         else:
+            if self._active:
+                self._publish_stop_once = True
             self._cmd = Twist()
             self._active = False
 
@@ -79,10 +88,11 @@ class TeleopJoyNode(Node):
         """Timer callback — publish the current command at the configured rate."""
         if self._active:
             self._pub.publish(self._cmd)
-        else:
-            # Publish an explicit stop so the hardware safety timeout is not
-            # triggered solely by a silent topic.
+        elif self._publish_stop_once:
+            # Publish one explicit stop on deadman release, then go silent so
+            # lower-priority autonomous sources can regain twist_mux control.
             self._pub.publish(Twist())
+            self._publish_stop_once = False
 
 
 def main(args=None) -> None:

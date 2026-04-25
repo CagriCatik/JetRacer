@@ -1,10 +1,10 @@
-# 05. Navigation and SLAM 
+# 5. Navigation and SLAM
 
 The **`jetracer_navigation`** and **`jetracer_localization`** packages merge incoming geometric and dynamic signals to physically locate the robot within a room and chart the mathematically optimal track line over multiple rooms.
 
 ## Sensor Fusion (The EKF)
 
-A solitary sensor is untrustworthy. Encoders slip on dust (predicting infinite speed). IMUs succumb to electromagnetic drift when passing heavy wiring (distorting your sense of North). 
+A solitary sensor is untrustworthy. Encoders slip on dust (predicting infinite speed). IMUs succumb to electromagnetic drift when passing heavy wiring (distorting your sense of North).
 
 Using the `robot_localization` ROS 2 package, we construct an **Extended Kalman Filter (EKF)** that mathematically averages the sensors simultaneously:
 
@@ -34,13 +34,16 @@ graph TD
 ```
 
 ### Navigating Like a Car
-Robots like Roombas use "Differential Drive"—meaning they mathematically output trajectories that demand turning in place. 
+
+Robots like Roombas use "Differential Drive"—meaning they mathematically output trajectories that demand turning in place.
 Your JetRacer uses a physical rack-and-pinion front axis. Therefore:
-1. Nav2 relies on the **SmacPlannerHybrid**, configuring exclusively to an `ACKERMANN` motion model with a locked $0.40m$ turning radius. 
+
+1. Nav2 relies on the **SmacPlannerHybrid**, configuring exclusively to an `ACKERMANN` motion model with a locked $0.40m$ turning radius.
 2. **Localization Stability**: AMCL is configured with the `nav2_amcl::DifferentialMotionModel`, which provides the most stable approximation for car-like localization in Nav2 without demanding non-existent lateral motion sensors.
 3. The `cmd_vel_to_steering.py` inverse kinematics script physically maps the requested Yaw rotation to your vehicle's physical $0.255m$ wheelbase, ensuring the tires actually pivot to the exact geometric angle requested by the AI.
 
 ### Safety & Supervision
+
 The navigation stack is supervised by the **`safety_supervisor`** node, which monitors LiDAR data for immediate obstacles and thresholds for wheel slip and battery health. If a critical fault occurs, the autonomous plan is immediately preempted by a hardware halt.
 
 ---

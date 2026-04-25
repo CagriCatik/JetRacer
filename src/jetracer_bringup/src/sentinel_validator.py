@@ -15,16 +15,14 @@ Waveshare JetRacer ROS AI Kit constraints:
 """
 
 from typing import Dict
-import time
 
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 from rcl_interfaces.msg import ParameterDescriptor
-from sensor_msgs.msg import BatteryState, Imu, Image, CameraInfo
-from geometry_msgs.msg import TwistStamped
+from sensor_msgs.msg import BatteryState, CompressedImage, Imu, LaserScan
 from std_msgs.msg import Bool
-from diagnostic_msgs.msg import DiagnosticStatus, DiagnosticArray
+from diagnostic_msgs.msg import DiagnosticStatus, DiagnosticArray, KeyValue
 
 
 class SentinelValidator(Node):
@@ -93,12 +91,11 @@ class SentinelValidator(Node):
 
         # Subscriptions
         self.create_subscription(Imu, 'imu', self._on_imu, sensor_qos)
+        self.create_subscription(BatteryState, 'battery_state', self._on_battery, 10)
         self.create_subscription(
-            BatteryState, 'battery_state', self._on_battery, qos_profile_default=1)
+            CompressedImage, 'csi_cam_0/image_raw/compressed', self._on_camera, sensor_qos)
         self.create_subscription(
-            Image, 'csi_cam_0/image_raw/compressed', self._on_camera, sensor_qos)
-        self.create_subscription(
-            TwistStamped, '/scan', self._on_lidar_scan, sensor_qos)
+            LaserScan, 'scan', self._on_lidar_scan, sensor_qos)
 
         # Publishers
         self._gate_status_pub = self.create_publisher(Bool, 'sentinel/gate_open', 1)
@@ -131,7 +128,7 @@ class SentinelValidator(Node):
         if self._imu_calibration_start_time is None:
             self._imu_calibration_start_time = now
 
-        window_start = self._imu_calibration_start_time.nanoseconds + (
+        window_start = now.nanoseconds - (
             int(self.get_parameter('imu_stable_duration').value * 1e9)
         )
         self._imu_samples = [
@@ -144,7 +141,7 @@ class SentinelValidator(Node):
         self._battery_current_max_seen = max(self._battery_current_max_seen, msg.current)
         self._serial_heartbeat_valid = msg.present
 
-    def _on_camera(self, msg: Image) -> None:
+    def _on_camera(self, msg: CompressedImage) -> None:
         """Track camera frame rate."""
         now = self.get_clock().now()
         
@@ -156,7 +153,7 @@ class SentinelValidator(Node):
         self._camera_last_frame_time = now
         self._camera_frame_count += 1
 
-    def _on_lidar_scan(self, msg: TwistStamped) -> None:
+    def _on_lidar_scan(self, msg: LaserScan) -> None:
         """Mark LiDAR as publishing."""
         self._lidar_last_message_time = self.get_clock().now()
         self._lidar_publishing = True
@@ -164,6 +161,13 @@ class SentinelValidator(Node):
     def _check_imu_stable(self) -> bool:
         """Check if IMU has been stationary for the required duration."""
         if len(self._imu_samples) < 5:
+            return False
+
+        duration = self.get_parameter('imu_stable_duration').value
+        sample_span = (
+            self._imu_samples[-1][0].nanoseconds - self._imu_samples[0][0].nanoseconds
+        ) / 1e9
+        if sample_span < duration:
             return False
 
         # Calculate variance of acceleration magnitude
@@ -322,9 +326,9 @@ class SentinelValidator(Node):
         self._validator_status_pub.publish(diag_array)
 
     @staticmethod
-    def _kv_pair(key: str, value: str) -> DiagnosticStatus.KeyValue:
+    def _kv_pair(key: str, value: str) -> KeyValue:
         """Create a key-value pair for diagnostics."""
-        kv = DiagnosticStatus.KeyValue()
+        kv = KeyValue()
         kv.key = key
         kv.value = value
         return kv

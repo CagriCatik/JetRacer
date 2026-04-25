@@ -19,12 +19,19 @@ def _launch_setup(context):
     use_sim_time = _to_bool(LaunchConfiguration('use_sim_time').perform(context))
 
     rviz_dir = Path(get_package_share_directory('jetracer_description')) / 'rviz'
+
+    # Profile map:
+    #   description  — robot URDF + TF tree only
+    #   navigation   — map + LaserScan + Nav2 path
+    #   slam         — map building view
+    #   autonomy     — full lane-following + perception debug view
+    #   lane_following — alias for autonomy
     profile_map = {
-        'description': rviz_dir / 'jetracer.rviz',
-        'navigation': rviz_dir / 'navigation.rviz',
-        'nav': rviz_dir / 'navigation.rviz',
-        'slam': rviz_dir / 'slam.rviz',
-        'autonomy': rviz_dir / 'autonomy.rviz',
+        'description':   rviz_dir / 'jetracer.rviz',
+        'navigation':    rviz_dir / 'navigation.rviz',
+        'nav':           rviz_dir / 'navigation.rviz',
+        'slam':          rviz_dir / 'slam.rviz',
+        'autonomy':      rviz_dir / 'autonomy.rviz',
         'lane_following': rviz_dir / 'autonomy.rviz',
     }
 
@@ -62,18 +69,22 @@ def generate_launch_description() -> LaunchDescription:
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_rviz',
-            default_value='true',
-            description='Start RViz.',
+            # Default OFF: RViz2 is too heavy to run on Jetson Nano during
+            # autonomous driving. Pass use_rviz:=true from a remote laptop.
+            default_value='false',
+            description='Start RViz2. Disabled by default — enable on a remote dev machine.',
         ),
         DeclareLaunchArgument(
             'rviz_profile',
-            default_value='description',
-            description='RViz profile: description, navigation, slam, autonomy.',
+            default_value='autonomy',
+            description=(
+                'RViz config profile: description | navigation | slam | autonomy | lane_following.'
+            ),
         ),
         DeclareLaunchArgument(
             'rviz_config',
             default_value='',
-            description='Optional absolute path to a custom .rviz file. Overrides rviz_profile when set.',
+            description='Optional absolute path to a custom .rviz file. Overrides rviz_profile.',
         ),
         DeclareLaunchArgument(
             'rviz_fixed_frame',
@@ -83,10 +94,11 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument(
             'use_sim_time',
             default_value='false',
-            description='Use simulation time for RViz.',
+            description='Use simulation time for RViz2.',
         ),
         OpaqueFunction(
             function=_launch_setup,
             condition=IfCondition(use_rviz),
         ),
     ])
+

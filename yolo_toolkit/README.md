@@ -6,11 +6,11 @@ A professional, hardware-optimized training and deployment suite for the JetRace
 
 ## Industrial-Grade Features
 
-*   **Orientation-Aware Augmentation**: Our configurations explicitly disable horizontal flips (`fliplr: 0.0`). This is critical for traffic signs (e.g., distinguishing Left vs. Right turns), preventing the label poisoning common in default YOLO pipelines.
-*   **Dataset Intelligence**: Built-in auditing tools to identify class imbalances and label density issues before expensive training runs.
-*   **TensorRT Hardware Optimization**: Integrated support for high-performance `.engine` export, enabling real-time inference on the Jetson Nano and RTX 3080.
-*   **Unified CLI**: A single-entry command-line interface for the entire lifecycle: Analysis → Training → Validation → Benchmarking → Deployment.
-*   **Quantization Ready**: Pre-configured for FP16 quantization to maximize throughput with minimal precision loss.
+* **Orientation-Aware Augmentation**: Our configurations explicitly disable horizontal flips (`fliplr: 0.0`). This is critical for traffic signs (e.g., distinguishing Left vs. Right turns), preventing the label poisoning common in default YOLO pipelines.
+* **Dataset Intelligence**: Built-in auditing tools to identify class imbalances and label density issues before expensive training runs.
+* **TensorRT Hardware Optimization**: Integrated support for high-performance `.engine` export, enabling real-time inference on the Jetson Nano and RTX 3080.
+* **Unified CLI**: A single-entry command-line interface for the entire lifecycle: Analysis → Training → Validation → Benchmarking → Deployment.
+* **Quantization Ready**: Pre-configured for FP16 quantization to maximize throughput with minimal precision loss.
 
 ---
 
@@ -38,6 +38,7 @@ The toolkit is optimized for the following traffic intelligence classes:
 Follow these steps to establish a high-performance training environment. **Python 3.11** is the recommended runtime.
 
 ### 1. Initialize Environment
+
 ```powershell
 # Navigate and create virtual environment
 cd yolo_toolkit
@@ -46,6 +47,7 @@ python -m venv venv
 ```
 
 ### 2. High-Performance Dependencies
+
 ```powershell
 # Install GPU-Accelerated PyTorch (RTX 30 series optimized)
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
@@ -59,27 +61,44 @@ pip install -r requirements.txt
 ## Unified Execution Suite
 
 ### 1. Pre-Flight Analysis
+
 Scan your dataset for health metrics and class distribution:
+
 ```powershell
 python main.py analyze --data ../dataset/data.yaml
 ```
 
 ### 2. Expert Training
+
 Launch the hardware-optimized training engine:
+
 ```powershell
 python main.py train --config configs/hyperparameters.yaml
 ```
+
 > [!NOTE]
 > All results are consolidated into the established `outputs/` directory for clean management.
 
 ### 3. Hardware Benchmarking
+
 Verify real-world FPS, latency, and jitter directly on your target hardware:
+
 ```powershell
 python main.py benchmark --weights outputs/jetracer_hardened/weights/best.pt
 ```
 
-### 4. TensorRT Deployment (Engine Export)
+### 4. Video Inference Validation
+
+Generate an annotated video by running the trained model over raw dataset images to visually validate real-world performance:
+
+```powershell
+python main.py infer_video --weights outputs/jetracer_hardened/weights/best.pt --source ../dataset/images/val
+```
+
+### 5. TensorRT Deployment (Engine Export)
+
 Convert your model to a high-speed hardware engine for the Jetson Nano:
+
 ```powershell
 python main.py export --weights outputs/jetracer_hardened/weights/best.pt --half
 ```

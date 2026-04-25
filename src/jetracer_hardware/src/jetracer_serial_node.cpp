@@ -1,14 +1,17 @@
 #include <boost/asio.hpp>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <cstdint>
 #include <cstring>
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -43,7 +46,7 @@ struct RP2040Telemetry {
   uint16_t firmware_version;      // CRC of firmware blob
   uint8_t watchdog_resets_count;  // Count since Jetson boot
   uint8_t estop_reason;           // Why E-stop was triggered
-  uint8_t command_ack_rate;       // % of commands acknowledged
+  uint8_t command_ack_rate{100};  // % of commands acknowledged
   int16_t steering_angle_measured; // Potentiometer feedback (optional)
   uint16_t voltage_rail_3v3;      // 3.3V rail voltage (mV)
   uint16_t voltage_rail_5v0;      // 5.0V rail voltage (mV) if available
@@ -91,6 +94,14 @@ public:
     declare_parameter<double>("command_timeout_sec", 1.0);
     declare_parameter<double>("send_period_sec", 0.02);
     declare_parameter<double>("wheel_radius", 0.035);
+    declare_parameter<double>("max_linear_velocity", 1.2);
+    declare_parameter<double>("max_lateral_velocity", 0.0);
+    declare_parameter<double>("max_steering_angle", 0.6);
+    // Safety additions
+    declare_parameter<bool>("dry_run", false);
+    declare_parameter<double>("max_accel_mps2", 0.5);
+    declare_parameter<double>("startup_speed_limit_ms", 0.20);
+    declare_parameter<double>("startup_duration_sec", 30.0);
 
     load_parameters();
 
@@ -110,13 +121,25 @@ public:
     parameter_callback_handle_ = add_on_set_parameters_callback(
       std::bind(&JetRacerSerialNode::parameter_callback, this, std::placeholders::_1));
 
-    open_serial_port();
-    send_coefficient();
-    send_params();
-
     last_receive_time_ = now();
     last_command_time_ = now();
-    serial_thread_ = std::thread(&JetRacerSerialNode::serial_task, this);
+    node_start_time_ = now();
+
+    if (dry_run_) {
+      RCLCPP_WARN(get_logger(),
+        "[DRY-RUN] Hardware serial writes are SUPPRESSED. "
+        "Serial port will not be opened and commands will NOT be sent to motors.");
+    } else {
+      open_serial_port();
+      send_coefficient();
+      send_params();
+      serial_thread_ = std::thread(&JetRacerSerialNode::serial_task, this);
+    }
+    if (startup_duration_sec_ > 0.0) {
+      RCLCPP_INFO(get_logger(),
+        "Startup speed limit active: %.2f m/s for %.0f s.",
+        startup_speed_limit_ms_, startup_duration_sec_);
+    }
 
     const auto send_period = std::chrono::duration<double>(send_period_sec_);
     send_timer_ = create_wall_timer(
@@ -173,6 +196,13 @@ private:
     command_timeout_sec_ = get_parameter("command_timeout_sec").as_double();
     send_period_sec_ = get_parameter("send_period_sec").as_double();
     wheel_radius_ = get_parameter("wheel_radius").as_double();
+    max_linear_velocity_ = std::abs(get_parameter("max_linear_velocity").as_double());
+    max_lateral_velocity_ = std::abs(get_parameter("max_lateral_velocity").as_double());
+    max_steering_angle_ = std::abs(get_parameter("max_steering_angle").as_double());
+    dry_run_ = get_parameter("dry_run").as_bool();
+    max_accel_mps2_ = std::abs(get_parameter("max_accel_mps2").as_double());
+    startup_speed_limit_ms_ = std::abs(get_parameter("startup_speed_limit_ms").as_double());
+    startup_duration_sec_ = std::abs(get_parameter("startup_duration_sec").as_double());
   }
 
   void open_serial_port()
@@ -243,6 +273,21 @@ private:
           std::bind(&JetRacerSerialNode::send_velocity_timer, this));
       } else if (name == "wheel_radius") {
         wheel_radius_ = parameter.as_double();
+      } else if (name == "max_linear_velocity") {
+        max_linear_velocity_ = std::abs(parameter.as_double());
+      } else if (name == "max_lateral_velocity") {
+        max_lateral_velocity_ = std::abs(parameter.as_double());
+      } else if (name == "max_steering_angle") {
+        max_steering_angle_ = std::abs(parameter.as_double());
+      } else if (name == "dry_run") {
+        dry_run_ = parameter.as_bool();
+        RCLCPP_WARN(get_logger(), "dry_run set to %s at runtime.", dry_run_ ? "TRUE" : "FALSE");
+      } else if (name == "max_accel_mps2") {
+        max_accel_mps2_ = std::abs(parameter.as_double());
+      } else if (name == "startup_speed_limit_ms") {
+        startup_speed_limit_ms_ = std::abs(parameter.as_double());
+      } else if (name == "startup_duration_sec") {
+        startup_duration_sec_ = std::abs(parameter.as_double());
       }
     }
 
@@ -318,11 +363,32 @@ private:
       command_stamp = last_command_time_;
     }
 
+    // Watchdog: zero velocity if command stream is stale
     if ((now() - command_stamp).seconds() > command_timeout_sec_) {
       command_x = 0.0;
       command_y = 0.0;
       command_yaw = 0.0;
     }
+
+    // Startup speed cap: apply conservative limit during bring-up window
+    if (startup_duration_sec_ > 0.0) {
+      const double elapsed = (now() - node_start_time_).seconds();
+      if (elapsed < startup_duration_sec_) {
+        const double lim = startup_speed_limit_ms_;
+        command_x = std::clamp(command_x, -lim, lim);
+      }
+    }
+
+    // Acceleration ramp: prevent velocity jumps from watchdog re-enable or
+    // sudden large commands. Applied on the outgoing command before clamping.
+    if (max_accel_mps2_ > 0.0 && send_period_sec_ > 0.0) {
+      const double max_delta = max_accel_mps2_ * send_period_sec_;
+      const double diff = command_x - prev_command_x_;
+      if (std::abs(diff) > max_delta) {
+        command_x = prev_command_x_ + std::copysign(max_delta, diff);
+      }
+    }
+    prev_command_x_ = command_x;
 
     send_velocity_frame(command_x, command_y, command_yaw);
   }
@@ -335,9 +401,16 @@ private:
     buffer[2] = 0x0B;
     buffer[3] = kSendTypeVelocity;
 
-    const auto linear_x = static_cast<int16_t>(x * 1000.0);
-    const auto linear_y = static_cast<int16_t>(y * 1000.0);
-    const auto angular_z = static_cast<int16_t>(yaw * 1000.0);
+    const double linear_limit = std::abs(max_linear_velocity_);
+    const double lateral_limit = std::abs(max_lateral_velocity_);
+    const double steering_limit = std::abs(max_steering_angle_);
+    const double clamped_x = std::clamp(x, -linear_limit, linear_limit);
+    const double clamped_y = std::clamp(y, -lateral_limit, lateral_limit);
+    const double clamped_yaw = std::clamp(yaw, -steering_limit, steering_limit);
+
+    const auto linear_x = static_cast<int16_t>(clamped_x * 1000.0);
+    const auto linear_y = static_cast<int16_t>(clamped_y * 1000.0);
+    const auto angular_z = static_cast<int16_t>(clamped_yaw * 1000.0);
 
     buffer[4] = static_cast<uint8_t>((linear_x >> 8) & 0xFF);
     buffer[5] = static_cast<uint8_t>(linear_x & 0xFF);
@@ -354,8 +427,23 @@ private:
     if (!serial_port_.is_open()) {
       return;
     }
+    if (dry_run_) {
+      // DRY-RUN: log the first two data bytes (type + length) as a command summary.
+      if (size >= 4U) {
+        RCLCPP_DEBUG(get_logger(),
+          "[DRY-RUN] TX type=0x%02X len=%u", data[3], static_cast<unsigned>(size));
+      }
+      return;
+    }
     std::scoped_lock lock(serial_mutex_);
-    boost::asio::write(serial_port_, boost::asio::buffer(data, size));
+    try {
+      boost::asio::write(serial_port_, boost::asio::buffer(data, size));
+    } catch (const std::exception & e) {
+      if (!stop_requested_.load()) {
+        RCLCPP_ERROR(get_logger(), "Serial write error: %s — port may have disconnected.", e.what());
+        needs_reconnect_.store(true);
+      }
+    }
   }
 
   void read_exact(uint8_t * destination, std::size_t size)
@@ -376,6 +464,27 @@ private:
     State state = State::Head1;
 
     while (!stop_requested_.load() && rclcpp::ok()) {
+      // Reconnect logic: triggered by write_bytes() on serial error
+      if (needs_reconnect_.load()) {
+        needs_reconnect_.store(false);
+        RCLCPP_WARN(get_logger(), "Serial port disconnected — attempting reconnect in 1 s...");
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        try {
+          boost::system::error_code ec;
+          serial_port_.cancel(ec);
+          serial_port_.close(ec);
+          open_serial_port();
+          send_coefficient();
+          send_params();
+          state = State::Head1;
+          RCLCPP_INFO(get_logger(), "Serial port reconnected successfully.");
+        } catch (const std::exception & reconnect_ex) {
+          RCLCPP_ERROR(get_logger(), "Reconnect failed: %s", reconnect_ex.what());
+          needs_reconnect_.store(true);  // retry next cycle
+        }
+        continue;
+      }
+
       try {
         switch (state) {
           case State::Head1:
@@ -604,7 +713,11 @@ private:
     std_msgs::msg::Int32 msg;
     msg.data = value;
     publisher->publish(msg);
-  }// Estimate OCV from loaded measurement
+  }
+
+  void diagnostic_battery(diagnostic_updater::DiagnosticStatusWrapper & stat)
+  {
+    // Estimate OCV from loaded measurement.
     double ocv_estimated = last_battery_voltage_ + (last_battery_current_ * battery_internal_resistance_ / 1000.0);
     double min_voltage_at_peak = ocv_estimated - (3000.0 * battery_internal_resistance_ / 1000.0);
 
@@ -694,18 +807,6 @@ private:
     stat.add("Stream Latency (s)", age);
   }
 
-  void diagnostic_battery(diagnostic_updater::DiagnosticStatusWrapper & stat)
-  {
-    if (last_battery_voltage_ > 11.1) {
-      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Voltage Healthy");
-    } else if (last_battery_voltage_ > 10.0) {
-      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Low Battery");
-    } else {
-      stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Critical Battery Level");
-    }
-    stat.add("Voltage (V)", last_battery_voltage_);
-  }
-
   boost::asio::io_service io_service_;
   boost::asio::serial_port serial_port_;
   std::mutex serial_mutex_;
@@ -745,12 +846,24 @@ private:
   double command_timeout_sec_{};
   double send_period_sec_{};
   double wheel_radius_{};
+  double max_linear_velocity_{};
+  double max_lateral_velocity_{};
+  double max_steering_angle_{};
 
   double commanded_x_{0.0};
   double commanded_y_{0.0};
   double commanded_yaw_{0.0};
+  double prev_command_x_{0.0};  // For acceleration ramp
   rclcpp::Time last_command_time_;
   rclcpp::Time last_receive_time_;
+  rclcpp::Time node_start_time_;
+
+  // Safety additions
+  bool dry_run_{false};
+  double max_accel_mps2_{0.5};
+  double startup_speed_limit_ms_{0.20};
+  double startup_duration_sec_{30.0};
+  std::atomic<bool> needs_reconnect_{false};
   double last_battery_voltage_{12.6};
   double last_battery_current_{0.0};
   double battery_internal_resistance_{0.5};  // Ohms: typical 18650 3S
@@ -765,7 +878,7 @@ private:
   uint32_t rp2040_ack_count_{0};
   uint32_t rp2040_watchdog_reset_threshold_{5};  // Warn if > 5 resets/hour
   
-  rear_left_wheel_position_{0.0};
+  double rear_left_wheel_position_{0.0};
   double rear_right_wheel_position_{0.0};
 };
 

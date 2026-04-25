@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -91,7 +92,7 @@ def generate_launch_description() -> LaunchDescription:
             name='lane_following',
             output='screen',
             parameters=[{
-                'start': LaunchConfiguration('start'),
+                'start': ParameterValue(LaunchConfiguration('start'), value_type=bool),
                 'max_speed_ms': LaunchConfiguration('max_speed_ms'),
                 'min_speed_ms': LaunchConfiguration('min_speed_ms'),
                 'kp': LaunchConfiguration('kp'),
@@ -133,10 +134,10 @@ def generate_launch_description() -> LaunchDescription:
                 'way_type': LaunchConfiguration('way_type'),
                 'camera_topic': LaunchConfiguration('camera_topic'),
                 'camera_info_topic': LaunchConfiguration('camera_info_topic'),
-                'use_camera_calibration': LaunchConfiguration('use_camera_calibration'),
-                'publish_ackermann_drive': LaunchConfiguration('publish_ackermann_drive'),
-                'publish_legacy_twist': LaunchConfiguration('publish_legacy_twist'),
-                'publish_debug_image': LaunchConfiguration('publish_debug_image'),
+                'use_camera_calibration': ParameterValue(LaunchConfiguration('use_camera_calibration'), value_type=bool),
+                'publish_ackermann_drive': ParameterValue(LaunchConfiguration('publish_ackermann_drive'), value_type=bool),
+                'publish_legacy_twist': ParameterValue(LaunchConfiguration('publish_legacy_twist'), value_type=bool),
+                'publish_debug_image': ParameterValue(LaunchConfiguration('publish_debug_image'), value_type=bool),
             }],
         ),
     ])

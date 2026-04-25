@@ -1,4 +1,4 @@
-# 08. Central Configuration
+# 8. Central Configuration
 
 The stack uses one editable runtime file for autonomous behavior tuning:
 

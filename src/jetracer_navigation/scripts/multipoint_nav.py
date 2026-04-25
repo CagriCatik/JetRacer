@@ -112,7 +112,7 @@ class MultipointNavigationNode(Node):
         if index < 0 or index >= len(self.waypoints):
             return
         if not self.navigator.wait_for_server(timeout_sec=1.0):
-            self.get_logger().warning('Waiting for Nav2 navigate_to_pose action server.')
+            self.get_logger().warn('Waiting for Nav2 navigate_to_pose action server.')
             return
 
         target = self.waypoints[index]
@@ -137,7 +137,7 @@ class MultipointNavigationNode(Node):
             self.handle_result(GoalStatus.STATUS_ABORTED)
             return
         if not goal_handle.accepted:
-            self.get_logger().warning('Nav2 rejected the patrol goal.')
+            self.get_logger().warn('Nav2 rejected the patrol goal.')
             self.handle_result(GoalStatus.STATUS_ABORTED)
             return
 
@@ -174,10 +174,10 @@ class MultipointNavigationNode(Node):
             self.dispatch_goal(next_index)
             return
 
-        self.get_logger().warning(f'Unable to reach target point {current_index}.')
+        self.get_logger().warn(f'Unable to reach target point {current_index}.')
         if self.retry_failed_once and self.retry_available:
             self.retry_available = False
-            self.get_logger().warning(f'Retrying target point {current_index}.')
+            self.get_logger().warn(f'Retrying target point {current_index}.')
             self.dispatch_goal(current_index)
             return
 

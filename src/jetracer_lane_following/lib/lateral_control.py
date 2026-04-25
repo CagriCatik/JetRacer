@@ -98,7 +98,7 @@ class LateralController:
 
         delta_cmd = psi_t + np.arctan2(self.gain_constant * d_t, v + epsilon)
         alpha = float(np.clip(self.steering_smoothing, 0.0, 1.0))
-        delta = alpha * float(delta_cmd) + (1.0 - alpha) * float(self.previous_steering_angle)
+        delta = (1.0 - alpha) * float(delta_cmd) + alpha * float(self.previous_steering_angle)
         delta = float(np.clip(delta, -limit, limit))
         self.previous_steering_angle = delta
         return delta

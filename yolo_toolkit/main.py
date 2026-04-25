@@ -17,6 +17,7 @@ from export_yolo import main as export_main
 from validate_yolo import main as validate_main
 from visualize_data import main as analyze_main
 from benchmarker import main as benchmark_main
+from infer_video import main as infer_video_main
 
 def show_banner():
     banner = Text("🚀 JETRACER YOLO TOOLKIT", style="bold magenta", justify="center")
@@ -53,6 +54,12 @@ def main():
     benchmark_parser.add_argument("--weights", type=str, required=True, help="Model weights")
     benchmark_parser.add_argument("--frames", type=int, default=100, help="Testing frames")
 
+    # Infer Video Subcommand
+    infer_parser = subparsers.add_parser("infer_video", help="Run inference on dataset images and save as video")
+    infer_parser.add_argument("--weights", type=str, required=True, help="Path to weights (e.g. best.pt)")
+    infer_parser.add_argument("--source", type=str, required=True, help="Path to folder of images")
+    infer_parser.add_argument("--output", type=str, default="outputs/inference_demo.mp4", help="Output video")
+
     args = parser.parse_args()
 
     if args.mode == "train":
@@ -81,6 +88,11 @@ def main():
         console.print(f"[bold red]Benchmarking Hardware performance...[/bold red]")
         sys.argv = [sys.argv[0], "--weights", args.weights, "--frames", str(args.frames)]
         benchmark_main()
+
+    elif args.mode == "infer_video":
+        console.print(f"[bold cyan]Running Video Inference with {args.weights}...[/bold cyan]")
+        sys.argv = [sys.argv[0], "--weights", args.weights, "--source", args.source, "--output", args.output]
+        infer_video_main()
     
     else:
         parser.print_help()

@@ -2,7 +2,6 @@
 import subprocess
 import os
 import signal
-import time
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
@@ -45,21 +44,28 @@ class ControllerRelayNode(Node):
             self.get_logger().info(f"Terminating mission: {self._active_mission}")
             # Sends SIGINT to the whole process group
             os.killpg(os.getpgid(self._active_process.pid), signal.SIGINT)
-            self._active_process.wait()
+            try:
+                self._active_process.wait(timeout=5.0)
+            except subprocess.TimeoutExpired:
+                self.get_logger().warn("Mission did not exit after SIGINT; sending SIGTERM.")
+                os.killpg(os.getpgid(self._active_process.pid), signal.SIGTERM)
+                self._active_process.wait(timeout=5.0)
             self._active_process = None
         self._active_mission = "IDLE"
         self._publish_status()
 
-    def _launch_mission(self, package, launch_file, mission_name):
+    def _launch_mission(self, package, launch_file, mission_name, extra_args=None):
         if self._active_process:
             self.get_logger().warn("A mission is already running. Kill it first!")
             return
 
         self.get_logger().info(f"Launching mission: {mission_name}...")
-        cmd = f"ros2 launch {package} {launch_file}"
+        cmd = ['ros2', 'launch', package, launch_file]
+        if extra_args:
+            cmd.extend(extra_args)
         # Start in a new process group so we can SIGINT the whole tree later
         self._active_process = subprocess.Popen(
-            cmd, shell=True, preexec_fn=os.setsid
+            cmd, preexec_fn=os.setsid
         )
         self._active_mission = mission_name
         self._publish_status()
@@ -78,11 +84,21 @@ class ControllerRelayNode(Node):
         if msg.buttons[self._select] == 1:
             # SELECT + START = Autonomy
             if msg.buttons[self._start] == 1:
-                self._launch_mission('jetracer_bringup', 'autonomy.launch.py', 'AUTONOMY')
+                self._launch_mission(
+                    'jetracer_bringup',
+                    'autonomy.launch.py',
+                    'AUTONOMY',
+                    ['start_base:=false'],
+                )
             
             # SELECT + X = SLAM
             elif msg.buttons[self._x] == 1:
-                self._launch_mission('jetracer_navigation', 'slam_nav.launch.py', 'SLAM')
+                self._launch_mission(
+                    'jetracer_navigation',
+                    'slam_nav.launch.py',
+                    'SLAM',
+                    ['start_base:=false'],
+                )
 
 def main(args=None):
     rclpy.init(args=args)

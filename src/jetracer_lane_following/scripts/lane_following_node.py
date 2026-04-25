@@ -33,15 +33,16 @@ import cv2
 import numpy as np
 import rclpy
 from cv_bridge import CvBridge
-from geometry_msgs.msg import Pose, PoseArray, Twist
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Point, Pose, PoseArray, PoseStamped, Twist
+from nav_msgs.msg import Odometry, Path
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CameraInfo, CompressedImage
-from std_msgs.msg import Float32, Float32MultiArray, String
+from std_msgs.msg import ColorRGBA, Float32, Float32MultiArray, String
+from visualization_msgs.msg import Marker, MarkerArray
 
 from lane_detection import LaneDetection, LaneDetectionResult
 from lateral_control import LateralController
@@ -115,6 +116,10 @@ class LaneFollowingNode(Node):
 
         # I/O
         self.declare_parameter("publish_debug_image", True)
+        self.declare_parameter("debug_fps_limit", 5.0)     # Max Hz for debug image (saves bus bandwidth)
+        self.declare_parameter("max_frame_age_sec", 0.20)  # Skip control if camera frame is stale
+        # Marker visualisation: disable on Jetson to save CPU; enable on remote dev machine
+        self.declare_parameter("enable_markers", True)
         self.declare_parameter("camera_topic", "csi_cam_0/image_raw/compressed")
         self.declare_parameter("camera_info_topic", "csi_cam_0/camera_info")
         self.declare_parameter("use_camera_calibration", True)
@@ -175,6 +180,13 @@ class LaneFollowingNode(Node):
         self._undistort_map2: np.ndarray | None = None
         self._undistort_size: tuple[int, int] | None = None
         self._warned_missing_camera_info = False
+        # Performance tracking
+        import time as _time_mod
+        self._time_mod = _time_mod
+        self._last_debug_publish_wall: float = 0.0
+        self._last_callback_wall: float = 0.0
+        self._fps_ema: float = 0.0
+        self._fps_ema_alpha: float = 0.1
 
         self._cmd_pub = self.create_publisher(Twist, "cmd_vel_lane", 1)
         self._drive_pub = None
@@ -197,6 +209,12 @@ class LaneFollowingNode(Node):
         self._viz_pub = self.create_publisher(PoseArray, "lane_following/path_viz", 1)
         self._status_pub = self.create_publisher(String, "lane_following/status", 1)
         self._confidence_pub = self.create_publisher(Float32, "lane_following/confidence", 1)
+        # Performance monitoring topics
+        self._ctrl_fps_pub = self.create_publisher(Float32, "lane_following/control_fps", 10)
+        self._frame_age_pub = self.create_publisher(Float32, "lane_following/frame_age_sec", 10)
+        # RViz2 visualisation topics (gated by enable_markers parameter)
+        self._markers_pub = self.create_publisher(MarkerArray, "lane_following/markers", 1)
+        self._path_pub = self.create_publisher(Path, "lane_following/path", 1)
 
         self._camera_cb_group = MutuallyExclusiveCallbackGroup()
         self._odom_cb_group = MutuallyExclusiveCallbackGroup()
@@ -295,6 +313,9 @@ class LaneFollowingNode(Node):
         self._path_frame_id = str(fetch("path_frame_id")).strip() or "base_link"
 
         self._publish_debug = bool(fetch("publish_debug_image"))
+        self._debug_fps_limit = max(0.1, float(fetch("debug_fps_limit")))
+        self._max_frame_age_sec = max(0.01, float(fetch("max_frame_age_sec")))
+        self._enable_markers = bool(fetch("enable_markers"))
         self._camera_info_topic = str(fetch("camera_info_topic"))
         self._use_camera_calibration = bool(fetch("use_camera_calibration"))
         self._publish_ackermann_drive = bool(fetch("publish_ackermann_drive"))
@@ -661,8 +682,6 @@ class LaneFollowingNode(Node):
             return "WEAK", 0.60
         if detected_count == 1:
             return "WEAK", 0.45
-        if detection.left_fit is not None or detection.right_fit is not None:
-            return "WEAK", 0.30
         return "LOST", 0.0
 
     def _publish_drive_commands(self, header, linear_x: float, steering_angle: float) -> None:
@@ -710,6 +729,45 @@ class LaneFollowingNode(Node):
         self._confidence_pub.publish(confidence_msg)
 
     def _image_callback(self, msg: CompressedImage) -> None:
+        # ── Frame age check ───────────────────────────────────────────────
+        now_wall = self._time_mod.monotonic()
+        frame_stamp_sec = (float(msg.header.stamp.sec)
+                           + float(msg.header.stamp.nanosec) * 1e-9)
+        frame_age: float = 0.0
+        if frame_stamp_sec > 0.0:
+            now_ros_sec = self.get_clock().now().nanoseconds * 1e-9
+            frame_age = now_ros_sec - frame_stamp_sec
+            if frame_age > self._max_frame_age_sec:
+                self.get_logger().warn(
+                    f"Stale camera frame: age={frame_age:.3f}s > "
+                    f"max={self._max_frame_age_sec:.3f}s — skipping control.",
+                    throttle_duration_sec=2.0)
+                # Publish safe zero commands so twist_mux timeout still works
+                self._publish_drive_commands(msg.header, 0.0, 0.0)
+                self._publish_tracking_state()
+                return
+
+        # ── FPS tracking ──────────────────────────────────────────────────
+        if self._last_callback_wall > 0.0:
+            dt_wall = now_wall - self._last_callback_wall
+            if 0.0 < dt_wall < 5.0:
+                inst_fps = 1.0 / dt_wall
+                if self._fps_ema <= 0.0:
+                    self._fps_ema = inst_fps
+                else:
+                    self._fps_ema = (self._fps_ema_alpha * inst_fps
+                                     + (1.0 - self._fps_ema_alpha) * self._fps_ema)
+        self._last_callback_wall = now_wall
+
+        fps_msg = Float32()
+        fps_msg.data = float(self._fps_ema)
+        self._ctrl_fps_pub.publish(fps_msg)
+
+        age_msg = Float32()
+        age_msg.data = float(frame_age)
+        self._frame_age_pub.publish(age_msg)
+
+        # ── Normal processing ─────────────────────────────────────────────
         try:
             frame_bgr = self._bridge.compressed_imgmsg_to_cv2(msg, "bgr8")
         except Exception as exc:
@@ -784,13 +842,146 @@ class LaneFollowingNode(Node):
         self._publish_waypoints(msg.header, plan)
         self._publish_tracking_state()
 
+        if self._enable_markers:
+            self._publish_rviz_markers(msg.header, plan, steering_angle, linear_x)
+
         if self._publish_debug:
-            self._publish_debug_frame(
-                working_frame,
-                plan.waypoints_camera,
-                target_speed_ms,
-                steering_angle,
-            )
+            # Gate debug image to debug_fps_limit to reduce bus bandwidth
+            now_wall = self._time_mod.monotonic()
+            min_interval = 1.0 / self._debug_fps_limit
+            if (now_wall - self._last_debug_publish_wall) >= min_interval:
+                self._last_debug_publish_wall = now_wall
+                self._publish_debug_frame(
+                    working_frame,
+                    plan.waypoints_camera,
+                    target_speed_ms,
+                    steering_angle,
+                )
+
+    def _publish_rviz_markers(
+        self,
+        header,
+        plan: WaypointPlan,
+        steering_angle: float,
+        linear_x: float,
+    ) -> None:
+        """
+        Publish lightweight RViz2 visualisation markers for the lane-following state.
+
+        All markers use the path_frame_id (base_link) so they follow the robot.
+        The publisher is gated by self._enable_markers to avoid CPU overhead on Jetson.
+
+        Topics:
+          lane_following/path       nav_msgs/Path   — planned centerline in base_link
+          lane_following/markers    MarkerArray     — lookahead pt, steering arrow, status cube
+        """
+        frame_id = self._path_frame_id  # typically "base_link"
+        stamp = header.stamp
+
+        # ── 1. nav_msgs/Path — planned centerline ─────────────────────────────
+        path_msg = Path()
+        path_msg.header.stamp = stamp
+        path_msg.header.frame_id = frame_id
+        if (plan.waypoints_vehicle is not None
+                and plan.waypoints_vehicle.ndim == 2
+                and plan.waypoints_vehicle.shape[1] >= 2):
+            for x_fwd, y_left in zip(plan.waypoints_vehicle[0], plan.waypoints_vehicle[1]):
+                ps = PoseStamped()
+                ps.header.stamp = stamp
+                ps.header.frame_id = frame_id
+                ps.pose.position.x = float(x_fwd)
+                ps.pose.position.y = float(y_left)
+                ps.pose.position.z = 0.0
+                ps.pose.orientation.w = 1.0
+                path_msg.poses.append(ps)
+        self._path_pub.publish(path_msg)
+
+        markers = MarkerArray()
+
+        # ── 2. Lookahead / target point sphere ────────────────────────────────
+        #    Placed at the nearest waypoint to the configured lookahead distance.
+        lookahead_marker = Marker()
+        lookahead_marker.header.stamp = stamp
+        lookahead_marker.header.frame_id = frame_id
+        lookahead_marker.ns = 'lane_following'
+        lookahead_marker.id = 0
+        lookahead_marker.type = Marker.SPHERE
+        lookahead_marker.action = Marker.ADD
+        lookahead_marker.scale.x = 0.06
+        lookahead_marker.scale.y = 0.06
+        lookahead_marker.scale.z = 0.06
+        lookahead_marker.color.a = 0.9
+        lookahead_marker.color.r = 1.0
+        lookahead_marker.color.g = 0.8
+        lookahead_marker.color.b = 0.0
+        lookahead_marker.lifetime.sec = 1
+        # Position: use first waypoint if available, else origin
+        if path_msg.poses:
+            mid_idx = min(1, len(path_msg.poses) - 1)
+            p = path_msg.poses[mid_idx].pose.position
+            lookahead_marker.pose.position.x = p.x
+            lookahead_marker.pose.position.y = p.y
+        lookahead_marker.pose.orientation.w = 1.0
+        markers.markers.append(lookahead_marker)
+
+        # ── 3. Steering direction arrow ───────────────────────────────────────
+        #    An arrow originating at the robot front, pointing in the steering direction.
+        import math as _math
+        steer_marker = Marker()
+        steer_marker.header.stamp = stamp
+        steer_marker.header.frame_id = frame_id
+        steer_marker.ns = 'lane_following'
+        steer_marker.id = 1
+        steer_marker.type = Marker.ARROW
+        steer_marker.action = Marker.ADD
+        steer_marker.scale.x = 0.02   # shaft diameter
+        steer_marker.scale.y = 0.04   # head diameter
+        steer_marker.scale.z = 0.04   # head length
+        steer_marker.color.a = 0.85
+        steer_marker.color.r = 0.2
+        steer_marker.color.g = 0.6
+        steer_marker.color.b = 1.0
+        steer_marker.lifetime.sec = 1
+        # Arrow from front axle to projected target point
+        front_x = self._bev_forward_m_per_px * 160.0  # approx front axle offset
+        arrow_len = max(0.12, abs(linear_x) * 0.5)    # scale with speed
+        start_pt = Point(x=front_x, y=0.0, z=0.05)
+        # end point rotated by steering angle
+        end_x = front_x + arrow_len * _math.cos(steering_angle)
+        end_y = arrow_len * _math.sin(steering_angle)
+        end_pt = Point(x=end_x, y=end_y, z=0.05)
+        steer_marker.points = [start_pt, end_pt]
+        markers.markers.append(steer_marker)
+
+        # ── 4. Tracking-state status cube ─────────────────────────────────────
+        #    Coloured cube above the robot: green=GOOD, yellow=WEAK, red=LOST
+        status_marker = Marker()
+        status_marker.header.stamp = stamp
+        status_marker.header.frame_id = frame_id
+        status_marker.ns = 'lane_following'
+        status_marker.id = 2
+        status_marker.type = Marker.CUBE
+        status_marker.action = Marker.ADD
+        status_marker.scale.x = 0.06
+        status_marker.scale.y = 0.06
+        status_marker.scale.z = 0.06
+        status_marker.pose.position.x = 0.0
+        status_marker.pose.position.z = 0.20   # above the robot
+        status_marker.pose.orientation.w = 1.0
+        status_marker.lifetime.sec = 1
+        status_color_map = {
+            'GOOD': (0.0, 1.0, 0.0),
+            'WEAK': (1.0, 0.85, 0.0),
+            'LOST': (1.0, 0.0, 0.0),
+        }
+        r, g, b = status_color_map.get(self._tracking_status, (0.5, 0.5, 0.5))
+        status_marker.color.r = r
+        status_marker.color.g = g
+        status_marker.color.b = b
+        status_marker.color.a = 0.85
+        markers.markers.append(status_marker)
+
+        self._markers_pub.publish(markers)
 
     def _publish_debug_frame(
         self,

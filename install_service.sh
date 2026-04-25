@@ -7,8 +7,9 @@
 # Determine the repository root
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-SERVICE_FILE="${REPO_ROOT}/jetracer.service"
 BOOT_SCRIPT="${REPO_ROOT}/jetracer_boot.sh"
+SERVICE_USER="${SUDO_USER:-$USER}"
+TMP_SERVICE="$(mktemp)"
 
 echo "--- JetRacer Service Installation ---"
 
@@ -16,15 +17,31 @@ echo "--- JetRacer Service Installation ---"
 chmod +x "$BOOT_SCRIPT"
 echo "Made boot script executable."
 
-# 2. Check if service file exists
-if [ ! -f "$SERVICE_FILE" ]; then
-    echo "ERROR: Service file not found at $SERVICE_FILE"
-    exit 1
-fi
+# 2. Generate a systemd unit for this user and checkout path.
+cat > "$TMP_SERVICE" <<EOF
+[Unit]
+Description=JetRacer ROS 2 Sentinel Service
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${SERVICE_USER}
+WorkingDirectory=${REPO_ROOT}
+ExecStart=/bin/bash ${BOOT_SCRIPT}
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
 # 3. Copy to systemd directory
-sudo cp "$SERVICE_FILE" /etc/systemd/system/jetracer.service
-echo "Copied service file to /etc/systemd/system/"
+sudo cp "$TMP_SERVICE" /etc/systemd/system/jetracer.service
+rm -f "$TMP_SERVICE"
+echo "Installed service file for user ${SERVICE_USER} at /etc/systemd/system/jetracer.service"
 
 # 4. Reload and Enable
 sudo systemctl daemon-reload

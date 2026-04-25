@@ -12,6 +12,8 @@ def generate_launch_description() -> LaunchDescription:
     params_file = LaunchConfiguration('params_file')
     slam_params_file = LaunchConfiguration('slam_params_file')
     slam_backend = LaunchConfiguration('slam_backend')
+    start_base = LaunchConfiguration('start_base')
+    start_lidar = LaunchConfiguration('start_lidar')
     use_sim_time = LaunchConfiguration('use_sim_time')
     autostart = LaunchConfiguration('autostart')
     use_multipoint_nav = LaunchConfiguration('use_multipoint_nav')
@@ -40,6 +42,8 @@ def generate_launch_description() -> LaunchDescription:
             ]),
         ),
         DeclareLaunchArgument('slam_backend', default_value='slam_toolbox'),
+        DeclareLaunchArgument('start_base', default_value='true'),
+        DeclareLaunchArgument('start_lidar', default_value='true'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('autostart', default_value='true'),
         DeclareLaunchArgument('use_multipoint_nav', default_value='false'),
@@ -60,6 +64,7 @@ def generate_launch_description() -> LaunchDescription:
                     'jetracer.launch.py',
                 ])
             ),
+            condition=IfCondition(start_base),
             launch_arguments={
                 'config_file': config_file,
                 'use_rviz': 'false',
@@ -73,6 +78,7 @@ def generate_launch_description() -> LaunchDescription:
                     'lidar.launch.py',
                 ])
             ),
+            condition=IfCondition(start_lidar),
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(

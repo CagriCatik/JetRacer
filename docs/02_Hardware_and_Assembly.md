@@ -1,4 +1,4 @@
-# 02. Hardware and Assembly
+# 2. Hardware and Assembly
 
 The JetRacer ROS 2 platform is built atop the mechanical chassis provided by the Waveshare JetRacer AI Kit, but significantly upgraded with external telemetry hardware.
 

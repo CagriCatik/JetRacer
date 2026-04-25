@@ -82,3 +82,7 @@ nav:
   - 10. Runtime Tuning: 10_Runtime_Tuning.md
   - 11. Operational Guide: 11_Operational_Guide.md
   - 12. Camera Calibration: 12_Camera_Calibration.md
+  - 13. Gazebo Simulation: 13_Gazebo_Simulation.md
+  - 14. RRT* Local Planner: 14_RRT_Local_Planner.md
+  - 15. RViz2 Workflow: 15_rviz2_workflow.md
+  - 16. Preflight Checklist: 16_Preflight_Checklist.md

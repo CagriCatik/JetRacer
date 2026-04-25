@@ -40,16 +40,24 @@ class LaneDetection:
         luminance_threshold: float = 180.0,
         roi_top_y: float = 140.0,
         roi_top_width: float = 120.0,
+        sliding_window_minpix: int = 15,
+        max_fit_age_frames: int = 5,
     ) -> None:
         """
         Initializes perspective transform geometries.
-        
+
         Args:
             luminance_threshold: Drops background textures below this brightness (0-255).
             roi_top_y: The height (Y) where the road vanishes into the horizon.
             roi_top_width: The width of the road trapezoid at the vanishing point.
+            sliding_window_minpix: Minimum white pixels in a window to recenter it.
+            max_fit_age_frames: Consecutive missed detections before the cached fit is
+                discarded. After this many misses the node reports LOST instead of
+                steering toward an obsolete polynomial.
         """
         self.lum_thresh = int(luminance_threshold)
+        self.sliding_window_minpix = int(max(1, sliding_window_minpix))
+        self.max_fit_age_frames = int(max(1, max_fit_age_frames))
 
         # Standard 320x240 camera projection.
         # Define the trapezoid covering the physical path the car is travelling towards:
@@ -76,6 +84,10 @@ class LaneDetection:
 
         self.left_fit_old = None
         self.right_fit_old = None
+        # Age counters: incremented each frame a fit is NOT refreshed.
+        # When age exceeds max_fit_age_frames the cached fit is evicted.
+        self._left_fit_age: int = 0
+        self._right_fit_age: int = 0
 
     def lane_detection(self, state_image_full: np.ndarray) -> LaneDetectionResult:
         """
@@ -108,7 +120,8 @@ class LaneDetection:
         leftx_current = leftx_base
         rightx_current = rightx_base
         margin = 35
-        minpix = 15
+        # Use parameterized minimum pixels threshold
+        minpix = self.sliding_window_minpix
 
         left_lane_inds = []
         right_lane_inds = []
@@ -131,9 +144,9 @@ class LaneDetection:
             left_lane_inds.append(good_left_inds)
             right_lane_inds.append(good_right_inds)
             
-            if len(good_left_inds) > minpix:
+            if len(good_left_inds) > self.sliding_window_minpix:
                 leftx_current = int(np.mean(nonzerox[good_left_inds]))
-            if len(good_right_inds) > minpix:
+            if len(good_right_inds) > self.sliding_window_minpix:
                 rightx_current = int(np.mean(nonzerox[good_right_inds]))
 
         left_lane_inds = np.concatenate(left_lane_inds)
@@ -169,13 +182,27 @@ class LaneDetection:
             if valid_widths.size > 0:
                 lane_width_px = float(np.median(valid_widths))
 
-        if left_fit is None:
-            left_fit = self.left_fit_old
-        if right_fit is None:
-            right_fit = self.right_fit_old
+        # Update cached fits and their age counters.
+        # A fit is only used from cache if it is younger than max_fit_age_frames.
+        if left_fit is not None:
+            self.left_fit_old = left_fit
+            self._left_fit_age = 0
+        else:
+            self._left_fit_age += 1
+            if self._left_fit_age <= self.max_fit_age_frames:
+                left_fit = self.left_fit_old  # still fresh enough
+            else:
+                left_fit = None  # expired — do not use
 
-        self.left_fit_old = left_fit
-        self.right_fit_old = right_fit
+        if right_fit is not None:
+            self.right_fit_old = right_fit
+            self._right_fit_age = 0
+        else:
+            self._right_fit_age += 1
+            if self._right_fit_age <= self.max_fit_age_frames:
+                right_fit = self.right_fit_old  # still fresh enough
+            else:
+                right_fit = None  # expired — do not use
 
         return LaneDetectionResult(
             left_fit=left_fit,

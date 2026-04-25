@@ -1,4 +1,4 @@
-# 04. Perception Stack
+# 4. Perception Stack
 
 The **`jetracer_perception`** package translates raw analog light hitting the IMX219 lens into actionable numerical mathematics. 
 

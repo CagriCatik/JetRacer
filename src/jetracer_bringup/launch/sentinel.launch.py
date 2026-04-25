@@ -39,7 +39,7 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(PathJoinSubstitution([
                 FindPackageShare('jetracer_hardware'), 'launch', 'hardware.launch.py',
             ])),
-            launch_arguments={'params_file': str(hardware_params_file)}.items(),
+            launch_arguments={'params_file': hardware_params_file}.items(),
         ),
 
         # cmd_vel arbitration: ensures highest-priority control always wins

@@ -1,4 +1,4 @@
-﻿# 03. Deployment and Docker
+﻿# 3. Deployment and Docker
 
 This guide is the canonical runtime workflow for JetRacer on Jetson Nano.
 

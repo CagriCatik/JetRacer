@@ -1,4 +1,4 @@
-# 06. Behavior and Arbitration
+# 6. Behavior and Arbitration
 
 The **`jetracer_behavior`** package serves as the "Pre-Frontal Cortex" of the JetRacer. It utilizes incoming mathematics to execute concrete action-states, effectively bridging the gap between passive calculation and physical driving logic.
 

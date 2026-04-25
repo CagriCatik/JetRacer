@@ -8,6 +8,7 @@ find_package(geometry_msgs REQUIRED)
 install(PROGRAMS
   scripts/cmd_vel_to_steering.py
   scripts/multipoint_nav.py
+  scripts/rrt_star_planner.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -3,6 +3,7 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -78,7 +79,7 @@ def generate_launch_description() -> LaunchDescription:
             parameters=[
                 config_file,
                 {
-                    'start': LaunchConfiguration('start'),
+                    'start': ParameterValue(LaunchConfiguration('start'), value_type=bool),
                     'max_speed_ms': LaunchConfiguration('max_speed_ms'),
                     'kp': LaunchConfiguration('kp'),
                     'ki': LaunchConfiguration('ki'),
@@ -89,9 +90,9 @@ def generate_launch_description() -> LaunchDescription:
                     'steering_smoothing': LaunchConfiguration('steering_smoothing'),
                     'controller_lookahead_m': LaunchConfiguration('controller_lookahead_m'),
                     'camera_info_topic': LaunchConfiguration('camera_info_topic'),
-                    'use_camera_calibration': LaunchConfiguration('use_camera_calibration'),
-                    'publish_ackermann_drive': LaunchConfiguration('publish_ackermann_drive'),
-                    'publish_legacy_twist': LaunchConfiguration('publish_legacy_twist'),
+                    'use_camera_calibration': ParameterValue(LaunchConfiguration('use_camera_calibration'), value_type=bool),
+                    'publish_ackermann_drive': ParameterValue(LaunchConfiguration('publish_ackermann_drive'), value_type=bool),
+                    'publish_legacy_twist': ParameterValue(LaunchConfiguration('publish_legacy_twist'), value_type=bool),
                 },
             ],
         ),
