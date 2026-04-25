@@ -38,7 +38,7 @@ Inside the container:
 
 ```bash
 cd /workspaces/JetRacer-ROS2
-source /opt/ros/humble/setup.bash
+source /opt/ros/foxy/setup.bash
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 source install/setup.bash
 ```
@@ -114,7 +114,7 @@ ros2 launch jetracer_bringup autonomy.launch.py \
 In another shell:
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/foxy/setup.bash
 source /workspaces/JetRacer-ROS2/install/setup.bash
 ros2 node list
 ros2 topic list

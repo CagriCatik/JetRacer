@@ -1,5 +1,5 @@
 {
-    "name": "JetRacer ROS 2 Humble (Jetson Nano)",
+    "name": "JetRacer ROS 2 Foxy (Jetson Nano)",
     "dockerComposeFile": "../docker-compose.yaml",
     "service": "jetracer_ros2",
     "workspaceFolder": "/workspaces/JetRacer-ROS2",
@@ -9,8 +9,8 @@
             "settings": {
                 "python.defaultInterpreterPath": "/usr/bin/python3",
                 "python.analysis.extraPaths": [
-                    "/opt/ros/humble/lib/python3.10/site-packages",
-                    "/workspaces/JetRacer-ROS2/install/lib/python3.10/site-packages"
+                    "/opt/ros/foxy/lib/python3.9/site-packages",
+                    "/workspaces/JetRacer-ROS2/install/lib/python3.9/site-packages"
                 ],
                 "python.languageServer": "Pylance",
                 "[python]": {

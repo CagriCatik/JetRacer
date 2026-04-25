@@ -3,14 +3,14 @@
 This project supports Jetson Nano with a practical workaround:
 
 - Host OS on the Nano: Ubuntu 20.04 community image
-- Robot runtime: ROS 2 Humble inside Docker
+- Robot runtime: ROS 2 Foxy inside Docker
 
-This avoids the official-image gap on Jetson Nano while keeping the codebase aligned with the ROS 2 Humble stack used in this repository.
+This avoids the official-image gap on Jetson Nano while keeping the codebase aligned with the ROS 2 Foxy stack used in this repository.
 
 ## Why this workflow exists
 
 - Jetson Nano + JetPack 4.6.1 is the target hardware baseline for this repo.
-- `setup/install_ros2.sh` supports native apt install only on Ubuntu 22.04 (Humble) and 24.04 (Jazzy).
+- `setup/install_ros2.sh` supports native apt install only on Ubuntu 22.04 (Humble) and 24.04 (Jazzy). Foxy is deployed via Docker on the Ubuntu 20.04 workaround image.
 - On Nano with Ubuntu 20.04 workaround image, the supported path for this repo is Docker, not native ROS 2 apt install.
 
 ## Compatibility Matrix
@@ -20,7 +20,7 @@ This avoids the official-image gap on Jetson Nano while keeping the codebase ali
 | Jetson Nano host OS | Supported via Ubuntu 20.04 workaround image | Community image, not official NVIDIA Ubuntu 20.04 image |
 | Native `setup/install_ros2.sh` on Nano | Not supported | Script rejects Ubuntu 20.04 by design |
 | Docker workflow on Nano | Supported and recommended | Canonical path for this project |
-| ROS runtime | ROS 2 Humble in container | `dustynv/ros:humble-ros-base-l4t-r32.7.1` |
+| ROS runtime | ROS 2 Foxy in container | Ubuntu 20.04 base with ROS 2 Foxy |
 
 ## Workaround Image Source
 

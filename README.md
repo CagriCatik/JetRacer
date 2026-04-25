@@ -4,14 +4,14 @@
 
 **Autonomy | Safety | Jetson Nano Optimized**
 
-[![ROS 2](https://img.shields.io/badge/ROS_2-Humble-blue.svg)](https://docs.ros.org/en/humble/)
+[![ROS 2](https://img.shields.io/badge/ROS_2-Foxy-blue.svg)](https://docs.ros.org/en/foxy/)
 [![Jetson Host](https://img.shields.io/badge/Jetson_Host-Ubuntu_20.04_Workaround-E95420.svg?logo=ubuntu&logoColor=white)](docs/00_ROS2-Jetson-Nano.md)
 [![Platform](https://img.shields.io/badge/Platform-Jetson_Nano-76B900.svg?logo=nvidia&logoColor=white)](https://developer.nvidia.com/embedded-computing)
 [![Docker](https://img.shields.io/badge/Container-Docker-informational.svg?logo=docker&logoColor=white)](https://docs.docker.com/)
 [![Docker Compose](https://img.shields.io/badge/Orchestration-Docker_Compose-2496ED.svg?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![Nav2](https://img.shields.io/badge/Navigation-Nav2-1f6feb.svg)](https://navigation.ros.org/)
 [![SLAM](https://img.shields.io/badge/SLAM-slam__toolbox-0A7E8C.svg)](https://github.com/SteveMacenski/slam_toolbox)
-[![RViz](https://img.shields.io/badge/Visualization-RViz2-4B8BBE.svg)](https://docs.ros.org/en/humble/Tutorials/Intermediate/RViz/RViz-User-Guide/RViz-User-Guide.html)
+[![RViz](https://img.shields.io/badge/Visualization-RViz2-4B8BBE.svg)](https://docs.ros.org/en/foxy/Tutorials/Intermediate/RViz/RViz-User-Guide/RViz-User-Guide.html)
 [![Foxglove](https://img.shields.io/badge/Telemetry-Foxglove_Bridge-FF6B35.svg)](https://foxglove.dev/)
 [![System](https://img.shields.io/badge/Architecture-Hardened-success.svg)](#production-hardening-roadmap)
 [![Diagnostics](https://img.shields.io/badge/Telemetry-Diagnostic_Ready-informational.svg)](#-active-diagnostics)
@@ -22,7 +22,7 @@
 [![TensorRT](https://img.shields.io/badge/Optimization-TensorRT-76B900.svg?logo=nvidia&logoColor=white)](#-exporting-for-jetson-tensorrt)
 [![Augmentation](https://img.shields.io/badge/Augmentation-Orientation--Aware-blueviolet.svg)](#machine-learning-yolo-training)
 
-*Professional grade ROS 2 Humble transformation for the Waveshare JetRacer platform. Designed for stability, deterministic control, and comprehensive observability.*
+*Professional grade ROS 2 Foxy transformation for the Waveshare JetRacer platform. Designed for stability, deterministic control, and comprehensive observability.*
 
 </div>
 
@@ -30,7 +30,7 @@
 
 ## What is this?
 
-A **production-grade ROS 2 Humble** autonomous driving stack for the [Waveshare JetRacer](https://www.waveshare.com/wiki/JetRacer_ROS_AI_Kit) running on an NVIDIA Jetson Nano. The platform transforms a hobby RC car into a multi-modal autonomous system with deterministic safety arbitration, real-time perception, SLAM-based mapping, and a Gazebo simulation environment — all decoupled into independent, composable ROS 2 packages.
+A **production-grade ROS 2 Foxy** autonomous driving stack for the [Waveshare JetRacer](https://www.waveshare.com/wiki/JetRacer_ROS_AI_Kit) running on an NVIDIA Jetson Nano. The platform transforms a hobby RC car into a multi-modal autonomous system with deterministic safety arbitration, real-time perception, SLAM-based mapping, and a Gazebo simulation environment — all decoupled into independent, composable ROS 2 packages.
 
 ---
 
@@ -106,7 +106,7 @@ flowchart LR
 ### 1. Jetson Nano host setup
 
 ```bash
-# Apply the Ubuntu 20.04 workaround for ROS 2 Humble on Jetson
+# Apply the Ubuntu 20.04 workaround for ROS 2 Foxy on Jetson
 # See docs/00_ROS2-Jetson-Nano.md for details
 ```
 
@@ -154,7 +154,7 @@ A complete **Gazebo Harmonic** simulation presents the same topic interface as t
 
 ```bash
 # Install prerequisites (one time)
-sudo apt install ros-humble-ros-gz gz-harmonic ros-humble-image-transport-plugins
+sudo apt install ros-foxy-image-transport-plugins
 
 # Build and run
 colcon build --packages-select jetracer_gazebo jetracer_description

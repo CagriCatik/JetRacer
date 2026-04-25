@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: jetracer-ros2:humble
+    image: jetracer-ros2:foxy
     container_name: jetracer_workspace
     privileged: true
     network_mode: host

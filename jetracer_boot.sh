@@ -4,7 +4,7 @@
 # Starts the Sentinel node for controller-driven mission launching.
 
 WORKSPACE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ROS_DISTRO="humble" # Default to humble, adjust if needed
+ROS_DISTRO="foxy" # Default to foxy, adjust if needed
 
 echo "--- JetRacer Bootstrap Initializing ---"
 

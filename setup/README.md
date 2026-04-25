@@ -35,12 +35,12 @@ Installs native ROS 2 from apt on supported Ubuntu versions.
 
 Supported Ubuntu versions:
 
+- `20.04` -> installs ROS 2 `foxy` (via Docker on Jetson Nano)
 - `22.04` -> installs ROS 2 `humble`
 - `24.04` -> installs ROS 2 `jazzy`
 
-Not supported:
+Note:
 
-- `20.04` -> script exits by design
 - Jetson Nano workaround host flow in this repository (use Docker runtime instead)
 
 Arguments:

@@ -7,7 +7,7 @@ The Waveshare JetRacer ROS kit uses an **IMX219-160** wide-angle CSI camera. Tha
 - Install the ROS 2 calibration package on the Jetson target if it is not already present:
 
 ```bash
-sudo apt install ros-humble-camera-calibration
+sudo apt install ros-foxy-camera-calibration
 ```
 
 - Use a printed checkerboard with a known square size.

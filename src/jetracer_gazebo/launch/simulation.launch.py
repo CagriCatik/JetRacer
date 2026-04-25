@@ -1,21 +1,22 @@
 """
 simulation.launch.py
 ====================
-JetRacer Gazebo Harmonic simulation launcher.
+JetRacer Gazebo Classic 11 simulation launcher for ROS 2 Foxy.
 
 Starts the full simulation stack:
-  1. gz sim         — Gazebo physics + rendering
-  2. robot_state_publisher   — publishes TF from URDF + joint_states
-  3. ros_gz_spawn_entity     — spawns the robot URDF into Gazebo
-  4. ros_gz_bridge           — bridges Gazebo ↔ ROS 2 topics
-  5. image_republisher       — converts raw Image to CompressedImage
+  1. gzserver       — Gazebo physics engine (headless)
+  2. gzclient       — Gazebo GUI (optional)
+  3. robot_state_publisher   — publishes TF from URDF + joint_states
+  4. spawn_model    — spawns the robot URDF into Gazebo via ROS service
+  5. Gazebo ROS bridges      — publishes Gazebo topics to ROS 2
+  6. image_republisher       — converts raw Image to CompressedImage
                                so lane_following_node gets its expected topic
-  6. RViz2 (optional)        — visualization
+  7. RViz2 (optional)        — visualization
 
 Arguments
 ---------
   world            : SDF world file path (default: jetracer_track.sdf)
-  robot_name       : Gazebo entity name (default: jetracer)
+  robot_name       : Gazebo model name (default: jetracer)
   spawn_x          : Spawn X coordinate (default: 0.0)
   spawn_y          : Spawn Y coordinate (default: 0.0)
   spawn_z          : Spawn Z (default: 0.05, slightly above ground)
@@ -23,7 +24,7 @@ Arguments
   gui              : Show Gazebo GUI (default: true)
   use_rviz         : Launch RViz2 (default: false)
   use_sim_time     : All nodes use Gazebo clock (default: true)
-  debug            : Enable verbose gz logging (default: false)
+  debug            : Enable verbose gazebo logging (default: false)
 
 Interface contract
 ------------------
@@ -42,6 +43,11 @@ Safety
 This launch file NEVER starts jetracer_hardware (the real motor driver).
 Hardware drivers are intentionally excluded to prevent accidental motor
 commands when the simulation and hardware share a ROS_DOMAIN_ID.
+
+Note
+----
+Gazebo Classic 11 publishes to /gazebo/* topics. Manual ROS 2 publishers
+in the simulation node bridge these to ROS 2 standard namespaces.
 """
 
 import subprocess
@@ -127,27 +133,36 @@ def _launch_setup(context, *args, **kwargs):
             "Ensure xacro is installed: sudo apt install ros-$ROS_DISTRO-xacro"
         ) from exc
 
-    bridge_config = str(Path(gz_pkg) / 'config' / 'ros_gz_bridge.yaml')
     rviz_config = str(Path(desc_pkg) / 'rviz' / 'autonomy.rviz')
 
     nodes = []
 
-    # ── 1. Gazebo Harmonic ────────────────────────────────────────────────────
-    gz_args = world
-    if not gui:
-        gz_args = '-s ' + gz_args   # headless (server only)
+    # ── 1. Gazebo Classic 11 Server (headless physics) ──────────────────────
+    gzserver_cmd = ['gzserver', '-s', 'libgazebo_ros_init.so', '-s', 'libgazebo_ros_factory.so']
+    
     if debug:
-        gz_args = '-v 4 ' + gz_args
-
-    gz_sim = ExecuteProcess(
-        cmd=['gz', 'sim', gz_args],
+        gzserver_cmd.insert(1, '--verbose')
+    
+    gzserver_cmd.append(world)
+    
+    gzserver_env = {'GAZEBO_RESOURCE_PATH': str(Path(gz_pkg) / 'worlds')}
+    
+    nodes.append(ExecuteProcess(
+        cmd=gzserver_cmd,
         output='screen',
-        additional_env={'GZ_SIM_RESOURCE_PATH': str(Path(gz_pkg) / 'worlds')},
-    )
-    nodes.append(gz_sim)
-    nodes.append(LogInfo(msg='[jetracer_gazebo] Gazebo Harmonic started'))
+        additional_env=gzserver_env,
+    ))
+    nodes.append(LogInfo(msg='[jetracer_gazebo] Gazebo Classic 11 server started'))
 
-    # ── 2. robot_state_publisher ──────────────────────────────────────────────
+    # ── 2. Gazebo Client (GUI) ────────────────────────────────────────────────
+    if gui:
+        nodes.append(ExecuteProcess(
+            cmd=['gzclient'],
+            output='screen',
+        ))
+        nodes.append(LogInfo(msg='[jetracer_gazebo] Gazebo GUI started'))
+
+    # ── 3. robot_state_publisher ──────────────────────────────────────────────
     nodes.append(Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -159,23 +174,33 @@ def _launch_setup(context, *args, **kwargs):
         }],
     ))
 
-    # ── 3. Spawn entity into Gazebo ───────────────────────────────────────────
-    # Delay slightly so Gazebo has time to start before the spawn request.
+    # ── 4. Spawn entity into Gazebo ───────────────────────────────────────────
+    # Delay so Gazebo has time to start before the spawn request.
+    # gazebo_ros spawn_model ROS service is the standard way in Classic.
+    spawn_model_cmd = [
+        'ros2', 'service', 'call',
+        '/spawn_entity',
+        'gazebo_msgs/srv/SpawnEntity',
+        f'{{name: {robot_name}, xml: "{robot_description.replace('"', '\\"')}", '
+        f'initial_pose: {{position: {{x: {spawn_x}, y: {spawn_y}, z: {spawn_z}}}, '
+        f'orientation: {{z: {spawn_yaw}}}}}}}',
+    ]
+    
+    # Simplified: use a Python node that calls the spawn service
     nodes.append(TimerAction(
-        period=3.0,
+        period=2.0,
         actions=[
             Node(
-                package='ros_gz_sim',
-                executable='create',
+                package='jetracer_gazebo',
+                executable='spawn_model.py',
                 name='spawn_jetracer',
                 output='screen',
                 arguments=[
-                    '-name', robot_name,
-                    '-topic', 'robot_description',
-                    '-x', spawn_x,
-                    '-y', spawn_y,
-                    '-z', spawn_z,
-                    '-Y', spawn_yaw,
+                    '--name', robot_name,
+                    '--x', spawn_x,
+                    '--y', spawn_y,
+                    '--z', spawn_z,
+                    '--yaw', spawn_yaw,
                 ],
                 parameters=[{'use_sim_time': use_sim_time}],
             ),
@@ -183,20 +208,17 @@ def _launch_setup(context, *args, **kwargs):
         ],
     ))
 
-    # ── 4. ros_gz_bridge ─────────────────────────────────────────────────────
-    # Bridges all sensor and drive topics between Gazebo and ROS 2.
+    # ── 5. Gazebo ROS Topic Bridge Node ───────────────────────────────────────
+    # This node subscribes to Gazebo's /gazebo/* topics and republishes to ROS 2 standard names
     nodes.append(Node(
-        package='ros_gz_bridge',
-        executable='parameter_bridge',
-        name='ros_gz_bridge',
+        package='jetracer_gazebo',
+        executable='gazebo_bridge.py',
+        name='gazebo_bridge',
         output='screen',
-        parameters=[{
-            'config_file': bridge_config,
-            'use_sim_time': use_sim_time,
-        }],
+        parameters=[{'use_sim_time': use_sim_time}],
     ))
 
-    # ── 5. Image republisher: raw → compressed ────────────────────────────────
+    # ── 6. Image republisher: raw → compressed ────────────────────────────────
     # lane_following_node and yolo_detection subscribe to
     # /csi_cam_0/image_raw/compressed (CompressedImage, JPEG).
     # Gazebo provides /csi_cam_0/image_raw (raw Image).
@@ -214,7 +236,7 @@ def _launch_setup(context, *args, **kwargs):
         parameters=[{'use_sim_time': use_sim_time}],
     ))
 
-    # ── 6. RViz2 (optional) ───────────────────────────────────────────────────
+    # ── 7. RViz2 (optional) ───────────────────────────────────────────────────
     if use_rviz:
         nodes.append(Node(
             package='rviz2',

@@ -6,8 +6,8 @@ This guide is the canonical runtime workflow for JetRacer on Jetson Nano.
 
 - Hardware: Jetson Nano
 - Host OS baseline: Ubuntu 20.04 workaround image on JetPack 4.6.1 (L4T 32.7.1)
-- Container base: `dustynv/ros:humble-ros-base-l4t-r32.7.1`
-- ROS distro in container: ROS 2 Humble
+- Container base: Ubuntu 20.04
+- ROS distro in container: ROS 2 Foxy
 - Runtime policy: ROS 2 only (no `ros1_bridge`)
 - Native `setup/install_ros2.sh` on Ubuntu 20.04 host: not supported
 

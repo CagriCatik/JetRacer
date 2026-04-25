@@ -102,16 +102,15 @@ src/jetracer_gazebo/
 ## Prerequisites
 
 ```bash
-# Install Gazebo Harmonic + ROS 2 integration (run once)
+# Install Gazebo Classic + ROS 2 integration (run once)
 sudo apt update
 sudo apt install -y \
-    ros-humble-ros-gz \
-    ros-humble-ros-gz-sim \
-    ros-humble-ros-gz-bridge \
-    ros-humble-ros-gz-image \
-    ros-humble-image-transport \
-    ros-humble-image-transport-plugins \
-    gz-harmonic
+    ros-foxy-gazebo-ros-pkgs \
+    ros-foxy-gazebo-plugins \
+    ros-foxy-gazebo-msgs \
+    ros-foxy-image-transport \
+    ros-foxy-image-transport-plugins \
+    gazebo11
 
 # Verify
 gz sim --version   # should print Gazebo Harmonic 8.x.x
@@ -276,7 +275,7 @@ rectangular loop (~5 m × 1.2 m). Design goals:
 | Camera FOV | Sim uses 80° pinhole. Real IMX219 is ~160° fisheye. Lane geometry differs. |
 | Ackermann approximation | Both front wheels get the same steering angle (no true differential). |
 | GPU LiDAR | Requires GPU/rendering context. Replace with `lidar` sensor type for pure headless. |
-| Compressed image | Requires `ros-humble-image-transport-plugins`; without it `/compressed` won't exist. |
+| Compressed image | Requires `ros-foxy-image-transport-plugins`; without it `/compressed` won't exist. |
 | No simulated stop signs | YOLO testing requires adding props to the world SDF. |
 
 ---

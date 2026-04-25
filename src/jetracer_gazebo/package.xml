@@ -3,7 +3,7 @@
   <name>jetracer_gazebo</name>
   <version>0.1.0</version>
   <description>
-    Gazebo Harmonic simulation for the JetRacer autonomous driving stack.
+    Gazebo Classic 11 simulation for the JetRacer autonomous driving stack.
     Provides a simulated environment with Ackermann drive, camera, LiDAR,
     and IMU that exposes the same topic interface as the real Jetson hardware,
     allowing the autonomous pipeline to connect without modification.
@@ -16,10 +16,17 @@
   <!-- jetracer_description provides the base URDF -->
   <depend>jetracer_description</depend>
 
-  <!-- Gazebo Harmonic (gz-sim 8) ROS 2 integration -->
-  <exec_depend>ros_gz_sim</exec_depend>
-  <exec_depend>ros_gz_bridge</exec_depend>
-  <exec_depend>ros_gz_image</exec_depend>
+  <!-- Gazebo Classic 11 ROS 2 integration for Foxy -->
+  <exec_depend>gazebo-ros-pkgs</exec_depend>
+  <exec_depend>gazebo-plugins</exec_depend>
+
+  <!-- Python node dependencies -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>gazebo_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
 
   <!-- ROS 2 runtime -->
   <exec_depend>ament_index_python</exec_depend>

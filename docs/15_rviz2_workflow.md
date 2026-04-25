@@ -22,7 +22,7 @@ Jetson Nano  ──ROS 2 DDS──▶  Laptop (Ubuntu / WSL2)
 
 ```bash
 # 1. Source workspace
-source /opt/ros/humble/setup.bash
+source /opt/ros/foxy/setup.bash
 source ~/ros2_ws/install/setup.bash
 
 # 2. Run the health check
@@ -39,7 +39,7 @@ ros2 launch jetracer_bringup autonomy.launch.py
 
 ```bash
 # 1. Source ROS 2 (same distro as Jetson)
-source /opt/ros/humble/setup.bash
+source /opt/ros/foxy/setup.bash
 
 # 2. Set ROS_DOMAIN_ID to match the Jetson
 export ROS_DOMAIN_ID=0        # must match value on Jetson
@@ -63,7 +63,7 @@ ros2 launch jetracer_description rviz.launch.py use_rviz:=true rviz_profile:=aut
 
 | Setting | Value |
 |---|---|
-| ROS 2 distro | Same on Jetson and laptop (e.g. `humble`) |
+| ROS 2 distro | Same on Jetson and laptop (e.g. `foxy`) |
 | `ROS_DOMAIN_ID` | Same integer on both machines (default: `0`) |
 | Network | Same LAN subnet, or direct Ethernet link |
 | Multicast | Enabled on the network switch (most home routers: yes) |
